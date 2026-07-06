@@ -16,6 +16,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { AdminCrudCreateButton, AdminCrudTools } from "@/components/public/admin-crud-tools";
+import {
+  AdministrativeStructureChart,
+  type AdministrativeStructureUnit,
+} from "@/components/public/administrative-structure-chart";
 import { ContentPageAdminTools } from "@/components/public/content-page-admin-tools";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SiteShell } from "@/components/public/site-shell";
@@ -88,6 +92,16 @@ type RawLegalItem = {
   sort_order: number;
   status: string;
 };
+
+async function getAdministrativeStructureUnits() {
+  return queryRows<AdministrativeStructureUnit>(
+    `SELECT id, academic_year, unit_key, unit_type, title, leader_name, leader_position, description,
+            duties_title, duties_text, secondary_title, secondary_duties_text,
+            color_theme, icon_name, sort_order, status
+     FROM administrative_structure_units
+     ORDER BY academic_year DESC, sort_order, id`
+  );
+}
 
 async function getPersonnelSection(slug: string) {
   const [profiles, layouts] = await Promise.all([
@@ -243,6 +257,7 @@ export default async function ContentPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const shouldLoadAdministrativeStructure = slug === "administrative-structure";
   const [
     overview,
     adminUser,
@@ -251,8 +266,10 @@ export default async function ContentPage({
     layoutConfig,
     personnelSummaryConfig,
     legalConfig,
+    administrativeStructureConfig,
     personnelSummaryRows,
     legalRows,
+    administrativeStructureRows,
   ] = await Promise.all([
     getSiteOverview(),
     getSignedInAdminUser(),
@@ -261,18 +278,21 @@ export default async function ContentPage({
     getAdminCrudAvailableConfig("personnel_layouts"),
     getAdminCrudAvailableConfig("personnel_summary_stats"),
     getAdminCrudAvailableConfig("legal_items"),
+    shouldLoadAdministrativeStructure ? getAdminCrudAvailableConfig("administrative_structure") : Promise.resolve(null),
     queryRows<RawPersonnelSummaryStat>(
       "SELECT id, academic_year, personnel_type, department, staff_count, context_note, sort_order, status FROM personnel_summary_stats WHERE status = 'active' ORDER BY academic_year DESC, sort_order, id"
     ),
     queryRows<RawLegalItem>(
       "SELECT id, title, category, description, content, fiscal_year, effective_date, file_path, source_url, sort_order, status FROM legal_items WHERE status = 'published' ORDER BY sort_order, COALESCE(effective_date, created_at) DESC, id DESC"
     ),
+    shouldLoadAdministrativeStructure ? getAdministrativeStructureUnits() : Promise.resolve(null),
   ]);
-  const [personnelRows, layoutRows, summaryCrudRows, legalCrudRows] = await Promise.all([
+  const [personnelRows, layoutRows, summaryCrudRows, legalCrudRows, administrativeStructureCrudRows] = await Promise.all([
     personnelConfig ? getAdminCrudRows(personnelConfig, 500) : Promise.resolve(null),
     layoutConfig ? getAdminCrudRows(layoutConfig, 50) : Promise.resolve(null),
     personnelSummaryConfig ? getAdminCrudRows(personnelSummaryConfig, 500) : Promise.resolve(null),
     legalConfig ? getAdminCrudRows(legalConfig, 500) : Promise.resolve(null),
+    administrativeStructureConfig ? getAdminCrudRows(administrativeStructureConfig, 200) : Promise.resolve(null),
   ]);
   const personnelRowsById = new Map((personnelRows ?? []).map((row) => [row.id, row]));
   const summaryRowsById = new Map((summaryCrudRows ?? []).map((row) => [row.id, row]));
@@ -322,6 +342,7 @@ export default async function ContentPage({
   const shouldShowPersonnelBeforeBody =
     shouldRenderPersonnelCards &&
     ["people", "committee"].includes(page.contentType ?? "");
+  const shouldRenderAdministrativeStructure = slug === "administrative-structure";
   const pageBody = (
     <>
       <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
@@ -550,7 +571,16 @@ export default async function ContentPage({
             </div>
           </section>
         ) : null}
-        {shouldShowPersonnelBeforeBody ? null : (
+        {shouldRenderAdministrativeStructure ? (
+          <AdministrativeStructureChart
+            units={administrativeStructureRows ?? []}
+            user={adminUser}
+            config={administrativeStructureConfig}
+            crudRows={administrativeStructureCrudRows}
+            pageSummary={page.summary}
+          />
+        ) : null}
+        {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure ? null : (
           <>
         <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
           <CardContent

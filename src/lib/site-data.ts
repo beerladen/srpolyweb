@@ -561,6 +561,7 @@ export const adminModules: AdminModule[] = [
   { key: "personnel_profiles", label: "บุคลากร / คณะกรรมการ", table: "personnel_profiles", permission: "personnel", description: "ข้อมูลผู้บริหาร บุคลากร และคณะกรรมการ" },
   { key: "personnel_summary_stats", label: "สรุปจำนวนบุคลากร", table: "personnel_summary_stats", permission: "personnel", description: "จัดการสรุปจำนวนครู บุคลากร และเจ้าหน้าที่ แยกตามปีการศึกษาและประเภท" },
   { key: "personnel_layouts", label: "เลย์เอาต์บุคลากร", table: "personnel_page_layouts", permission: "personnel", description: "ควบคุมรูปแบบการแสดงผลการ์ดบุคลากร" },
+  { key: "administrative_structure", label: "โครงสร้างการบริหาร", table: "administrative_structure_units", permission: "personnel", description: "จัดการผังฝ่าย งานย่อย ผู้รับผิดชอบ สี ไอคอน ลำดับ และสถานะการแสดงผล" },
   { key: "news_categories", label: "หมวดข่าว", table: "categories", permission: "news", description: "เพิ่ม แก้ไข และจัดลำดับหมวดข่าวที่ใช้กับหน้าแรกและหน้าข่าว" },
   { key: "news", label: "ข่าวประชาสัมพันธ์", table: "news", permission: "news", description: "เผยแพร่ข่าวและกิจกรรมของวิทยาลัย" },
   { key: "announcements", label: "ประกาศวิทยาลัย", table: "announcements", permission: "announcements", description: "ประกาศ ปฏิทิน และเอกสารแนบสำคัญ" },

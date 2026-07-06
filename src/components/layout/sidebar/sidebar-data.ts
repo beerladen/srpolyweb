@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Link2,
   MessageSquareWarning,
+  Network,
   Newspaper,
   PanelTop,
   Settings,
@@ -51,6 +52,7 @@ export const sidebarData: NavSection[] = [
       { title: "ผู้เรียนระยะสั้น", href: "/admin/modules/short_course_enrollments", icon: Sparkles, permission: "student_stats" },
       { title: "บุคลากร", href: "/admin/modules/personnel_profiles", icon: Building2, permission: "personnel" },
       { title: "สรุปจำนวนบุคลากร", href: "/admin/modules/personnel_summary_stats", icon: Users, permission: "personnel" },
+      { title: "โครงสร้างการบริหาร", href: "/admin/modules/administrative_structure", icon: Network, permission: "personnel" },
     ],
   },
   {
