@@ -359,6 +359,12 @@ function coerceFieldValue(
     const allowedValues = new Set(field.options.map((option) => option.value));
 
     if (!allowedValues.has(textValue)) {
+      const existingValue = String(existing?.[field.name] ?? "").trim();
+
+      if (existingValue && existingValue === textValue) {
+        return { ok: true, value: textValue };
+      }
+
       const defaultValue = String(field.defaultValue ?? field.options[0]?.value ?? "");
       return defaultValue
         ? { ok: true, value: defaultValue }

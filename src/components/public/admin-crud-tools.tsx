@@ -48,6 +48,7 @@ type AdminCrudToolsProps = {
   adminHref?: string;
   triggerVariant?: ButtonVariant;
   triggerSize?: ButtonSize;
+  initialValues?: Record<string, AdminCrudValue>;
 };
 
 type SavedItemResponse = {
@@ -75,9 +76,13 @@ function initialValue(field: AdminCrudField): AdminCrudValue {
   return "";
 }
 
-function makeInitialValues(fields: AdminCrudField[], row?: AdminCrudRow): Record<string, AdminCrudValue> {
+function makeInitialValues(
+  fields: AdminCrudField[],
+  row?: AdminCrudRow,
+  initialValues?: Record<string, AdminCrudValue>
+): Record<string, AdminCrudValue> {
   return Object.fromEntries(
-    fields.map((field) => [field.name, row?.values[field.name] ?? initialValue(field)])
+    fields.map((field) => [field.name, row?.values[field.name] ?? initialValues?.[field.name] ?? initialValue(field)])
   );
 }
 
@@ -119,12 +124,13 @@ export function AdminCrudTools({
   adminHref = `/admin/modules/${moduleKey}`,
   triggerVariant,
   triggerSize,
+  initialValues,
 }: AdminCrudToolsProps) {
   const router = useRouter();
   const fieldId = useId();
   const isEditing = Boolean(row);
   const triggerLabel = label ?? (isEditing ? "จัดการ" : "เพิ่มรายการ");
-  const defaultValues = useMemo(() => makeInitialValues(fields, row), [fields, row]);
+  const defaultValues = useMemo(() => makeInitialValues(fields, row, initialValues), [fields, row, initialValues]);
   const visibleFields = useMemo(() => fields.filter((field) => !field.hidden), [fields]);
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, AdminCrudValue>>(defaultValues);

@@ -19,7 +19,9 @@ import { SiteShell } from "@/components/public/site-shell";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
 import { getAdminCrudAvailableConfig, getAdminCrudRows } from "@/lib/admin-crud-server";
 import { queryRows } from "@/lib/db";
+import { canAccess } from "@/lib/permissions";
 import { getSiteOverview } from "@/lib/site-data";
+import { StudentEnrollmentManager, type StudentEnrollmentManagerRow } from "./student-enrollment-manager";
 import { StudentReportActions } from "./student-report-actions";
 
 type RawStudentEnrollment = {
@@ -65,6 +67,7 @@ type RawShortCourseEnrollment = {
 type SearchParams = Record<string, string | string[] | undefined>;
 type StudentTab = "regular" | "short";
 type RegularMetric = "student_count" | "actual_count" | "registered_count";
+type RegularLevelKey = "p1" | "p2" | "p3" | "pvsDualYear1" | "pvsDualYear2" | "pvsAssociateYear1" | "pvsAssociateYear2";
 
 type PivotRow = {
   department: string;
@@ -73,15 +76,17 @@ type PivotRow = {
   p2: number;
   p3: number;
   pvcTotal: number;
-  s1: number;
-  s2: number;
+  pvsDualYear1: number;
+  pvsDualYear2: number;
+  pvsAssociateYear1: number;
+  pvsAssociateYear2: number;
   pvsTotal: number;
   total: number;
   rows: RawStudentEnrollment[];
 };
 
 type LevelTotal = {
-  key: "p1" | "p2" | "p3" | "s1" | "s2";
+  key: RegularLevelKey;
   label: string;
   total: number;
 };
@@ -96,29 +101,37 @@ const fallbackRegularRows: RawStudentEnrollment[] = [
   ["ปวช.1", "ไฟฟ้ากำลัง", 18, 31],
   ["ปวช.2", "ไฟฟ้ากำลัง", 20, 32],
   ["ปวช.3", "ไฟฟ้ากำลัง", 13, 33],
-  ["ปวส.1", "ไฟฟ้ากำลัง", 36, 34],
-  ["ปวส.2", "ไฟฟ้ากำลัง", 24, 35],
+  ["ปวส.ทวิ ปี 1", "ไฟฟ้ากำลัง ทวิ", 12, 34],
+  ["ปวส.ทวิ ปี 2", "ไฟฟ้ากำลัง ทวิ", 13, 35],
+  ["ปวส.ภาคสมทบ ปี 1", "ไฟฟ้ากำลัง ภาคสมทบ", 20, 36],
+  ["ปวส.ภาคสมทบ ปี 2", "ไฟฟ้ากำลัง ภาคสมทบ", 15, 37],
   ["ปวช.2", "อิเล็กทรอนิกส์", 20, 41],
   ["ปวช.3", "อิเล็กทรอนิกส์", 2, 42],
-  ["ปวส.1", "อิเล็กทรอนิกส์", 6, 43],
+  ["ปวส.ทวิ ปี 1", "อิเล็กทรอนิกส์ ทวิ", 6, 43],
   ["ปวช.1", "การบัญชี", 10, 51],
   ["ปวช.3", "การบัญชี", 1, 52],
-  ["ปวส.1", "การบัญชี", 47, 53],
-  ["ปวส.2", "การบัญชี", 20, 54],
+  ["ปวส.ทวิ ปี 1", "การบัญชี ทวิ", 18, 53],
+  ["ปวส.ทวิ ปี 2", "การบัญชี ทวิ", 11, 54],
+  ["ปวส.ภาคสมทบ ปี 1", "การบัญชี ภาคสมทบ", 22, 55],
+  ["ปวส.ภาคสมทบ ปี 2", "การบัญชี ภาคสมทบ", 16, 56],
   ["ปวช.1", "อาหารและโภชนาการ", 8, 61],
   ["ปวช.2", "อาหารและโภชนาการ", 18, 62],
   ["ปวช.3", "อาหารและโภชนาการ", 2, 63],
-  ["ปวส.1", "อาหารและโภชนาการ", 28, 64],
-  ["ปวส.2", "อาหารและโภชนาการ", 16, 65],
+  ["ปวส.ทวิ ปี 1", "อาหารและโภชนาการ ทวิ", 28, 64],
+  ["ปวส.ทวิ ปี 2", "อาหารและโภชนาการ ทวิ", 16, 65],
   ["ปวช.1", "คอมพิวเตอร์ธุรกิจ", 14, 71],
   ["ปวช.2", "คอมพิวเตอร์ธุรกิจ", 15, 72],
   ["ปวช.3", "คอมพิวเตอร์ธุรกิจ", 5, 73],
-  ["ปวส.1", "เทคโนโลยีธุรกิจดิจิทัล", 33, 74],
-  ["ปวส.2", "เทคโนโลยีธุรกิจดิจิทัล", 19, 75],
-  ["ปวส.1", "เทคนิคเครื่องกล", 17, 81],
-  ["ปวส.2", "เทคนิคเครื่องกล", 15, 82],
-  ["ปวส.1", "เทคนิคการผลิต", 18, 91],
-  ["ปวส.2", "เทคนิคการผลิต", 12, 92],
+  ["ปวส.ทวิ ปี 1", "เทคโนโลยีธุรกิจดิจิทัล ทวิ", 10, 74],
+  ["ปวส.ทวิ ปี 2", "เทคโนโลยีธุรกิจดิจิทัล ทวิ", 6, 75],
+  ["ปวส.ภาคสมทบ ปี 1", "เทคโนโลยีธุรกิจดิจิทัล ภาคสมทบ", 21, 76],
+  ["ปวส.ภาคสมทบ ปี 2", "เทคโนโลยีธุรกิจดิจิทัล ภาคสมทบ", 15, 77],
+  ["ปวส.ทวิ ปี 1", "เทคนิคเครื่องกล ทวิ", 9, 81],
+  ["ปวส.ทวิ ปี 2", "เทคนิคเครื่องกล ทวิ", 12, 82],
+  ["ปวส.ภาคสมทบ ปี 1", "เทคนิคเครื่องกล ภาคสมทบ", 6, 83],
+  ["ปวส.ภาคสมทบ ปี 2", "เทคนิคเครื่องกล ภาคสมทบ", 5, 84],
+  ["ปวส.ทวิ ปี 1", "เทคนิคการผลิต ทวิ", 18, 91],
+  ["ปวส.ทวิ ปี 2", "เทคนิคการผลิต ทวิ", 12, 92],
 ].map(([level, department, count, sort], index) => ({
   id: -(index + 1),
   academic_year: "2569",
@@ -199,14 +212,17 @@ function branchLabelForDepartment(department: string): string {
   return department;
 }
 
-function levelKey(value: string): keyof Omit<PivotRow, "department" | "branch" | "pvcTotal" | "pvsTotal" | "total" | "rows"> | null {
-  const compact = normalizeForCompare(value);
+function levelKey(row: RawStudentEnrollment): RegularLevelKey | null {
+  const compact = normalizeForCompare(`${row.level_label} ${row.department_name}`);
+  const isAssociate = compact.includes("สมทบ") || compact.includes("ภาคสมทบ");
+  const isSecondYear = compact.includes("ปี2") || compact.includes("ปีที่2") || compact.includes("ปวส.2") || compact.includes("ปวส2");
 
   if (compact.includes("ปวช.1")) return "p1";
   if (compact.includes("ปวช.2")) return "p2";
   if (compact.includes("ปวช.3")) return "p3";
-  if (compact.includes("ปวส.1")) return "s1";
-  if (compact.includes("ปวส.2")) return "s2";
+  if ((compact.includes("ปวส.") || compact.includes("ปวส")) && isAssociate) return isSecondYear ? "pvsAssociateYear2" : "pvsAssociateYear1";
+  if (compact.includes("ปวส.1") || compact.includes("ปวส1") || compact.includes("ปี1") || compact.includes("ปีที่1")) return "pvsDualYear1";
+  if (compact.includes("ปวส.2") || compact.includes("ปวส2") || compact.includes("ปี2") || compact.includes("ปีที่2")) return "pvsDualYear2";
 
   return null;
 }
@@ -222,7 +238,7 @@ function buildPivotRows(rows: RawStudentEnrollment[], metric: RegularMetric): Pi
 
   for (const row of rows) {
     const department = departmentGroupName(row.department_name);
-    const key = levelKey(row.level_label);
+    const key = levelKey(row);
     if (!key) continue;
 
     const current =
@@ -234,8 +250,10 @@ function buildPivotRows(rows: RawStudentEnrollment[], metric: RegularMetric): Pi
         p2: 0,
         p3: 0,
         pvcTotal: 0,
-        s1: 0,
-        s2: 0,
+        pvsDualYear1: 0,
+        pvsDualYear2: 0,
+        pvsAssociateYear1: 0,
+        pvsAssociateYear2: 0,
         pvsTotal: 0,
         total: 0,
         rows: [],
@@ -250,8 +268,8 @@ function buildPivotRows(rows: RawStudentEnrollment[], metric: RegularMetric): Pi
     .map((row) => ({
       ...row,
       pvcTotal: row.p1 + row.p2 + row.p3,
-      pvsTotal: row.s1 + row.s2,
-      total: row.p1 + row.p2 + row.p3 + row.s1 + row.s2,
+      pvsTotal: row.pvsDualYear1 + row.pvsDualYear2 + row.pvsAssociateYear1 + row.pvsAssociateYear2,
+      total: row.p1 + row.p2 + row.p3 + row.pvsDualYear1 + row.pvsDualYear2 + row.pvsAssociateYear1 + row.pvsAssociateYear2,
     }))
     .sort((left, right) => left.department.localeCompare(right.department, "th-TH"));
 }
@@ -260,6 +278,24 @@ function uniqueSorted(values: Array<string | null | undefined>): string[] {
   return Array.from(new Set(values.filter((value): value is string => Boolean(value)))).sort((left, right) =>
     left.localeCompare(right, "th-TH")
   );
+}
+
+function enrollmentMergeKey(row: RawStudentEnrollment): string | null {
+  const key = levelKey(row);
+
+  return key ? `${row.academic_year}::${departmentGroupName(row.department_name)}::${key}` : null;
+}
+
+function mergeRegularRowsWithFallback(rows: RawStudentEnrollment[] | null): RawStudentEnrollment[] {
+  const dbRows = rows ?? [];
+  const existingKeys = new Set(dbRows.map(enrollmentMergeKey).filter((key): key is string => Boolean(key)));
+  const missingFallbackRows = fallbackRegularRows.filter((row) => {
+    const key = enrollmentMergeKey(row);
+
+    return Boolean(key && !existingKeys.has(key));
+  });
+
+  return [...dbRows, ...missingFallbackRows];
 }
 
 function buildHref(options: {
@@ -285,7 +321,7 @@ function buildHref(options: {
 }
 
 function csvHref(rows: PivotRow[]): string {
-  const header = ["แผนก", "สาขาวิชา", "ปวช.1", "ปวช.2", "ปวช.3", "รวม ปวช.", "ปวส.1", "ปวส.2", "รวม ปวส.", "รวมทั้งหมด"];
+  const header = ["แผนก", "สาขาวิชา", "ปวช.1", "ปวช.2", "ปวช.3", "รวม ปวช.", "ปวส.ทวิ ปี 1", "ปวส.ทวิ ปี 2", "ปวส.ภาคสมทบ ปี 1", "ปวส.ภาคสมทบ ปี 2", "รวม ปวส.", "รวมทั้งหมด"];
   const body = rows.map((row) => [
     row.department,
     row.branch,
@@ -293,8 +329,10 @@ function csvHref(rows: PivotRow[]): string {
     row.p2,
     row.p3,
     row.pvcTotal,
-    row.s1,
-    row.s2,
+    row.pvsDualYear1,
+    row.pvsDualYear2,
+    row.pvsAssociateYear1,
+    row.pvsAssociateYear2,
     row.pvsTotal,
     row.total,
   ]);
@@ -337,7 +375,7 @@ export default async function StudentsPage({
     getAdminCrudAvailableConfig("student_enrollments"),
     getAdminCrudAvailableConfig("short_course_enrollments"),
   ]);
-  const [enrollmentRows, shortCourseRows, crudRows, shortCrudRows] = await Promise.all([
+  const [enrollmentRows, shortCourseRows, shortCrudRows] = await Promise.all([
     queryRows<RawStudentEnrollment>(
       `SELECT id, academic_year, report_date, level_label, department_name, student_count,
               registered_count, unregistered_count, repeat_count, credit_collect_count, actual_count,
@@ -354,11 +392,10 @@ export default async function StudentsPage({
        WHERE status = 'active'
        ORDER BY academic_year DESC, sort_order, department_name, course_name, id`
     ),
-    enrollmentConfig ? getAdminCrudRows(enrollmentConfig, 500) : Promise.resolve(null),
     shortCourseConfig ? getAdminCrudRows(shortCourseConfig, 500) : Promise.resolve(null),
   ]);
 
-  const regularRows = enrollmentRows?.length ? enrollmentRows : fallbackRegularRows;
+  const regularRows = mergeRegularRowsWithFallback(enrollmentRows);
   const shortRows = shortCourseRows ?? [];
   const availableYears = Array.from(new Set([...regularRows.map((row) => row.academic_year), ...shortRows.map((row) => row.academic_year)])).sort(compareAcademicYearDesc);
   const selectedYear = firstSearchValue(resolvedSearchParams, "year") ?? availableYears[0] ?? "2569";
@@ -376,7 +413,7 @@ export default async function StudentsPage({
   const shortDepartmentOptions = uniqueSorted(yearShortRows.map((row) => row.department_name));
   const filteredRegularRows = yearRegularRows.filter((row) => {
     const department = departmentGroupName(row.department_name);
-    const level = levelKey(row.level_label);
+    const level = levelKey(row);
     const matchesSearch =
       !searchText ||
       normalizeForCompare(department).includes(normalizeForCompare(searchText)) ||
@@ -399,22 +436,41 @@ export default async function StudentsPage({
   const allPivotRowsForYear = buildPivotRows(yearRegularRows, selectedMetric);
   const focusedDepartment = firstSearchValue(resolvedSearchParams, "focus") ?? pivotRows.find((row) => row.total > 0)?.department;
   const focusedRow = pivotRows.find((row) => row.department === focusedDepartment) ?? pivotRows[0];
-  const crudRowsById = new Map((crudRows ?? []).map((row) => [row.id, row]));
   const shortCrudRowsById = new Map((shortCrudRows ?? []).map((row) => [row.id, row]));
+  const canManageStudentEnrollments = Boolean(
+    adminUser && enrollmentConfig && canAccess(adminUser.effectivePermissions, enrollmentConfig.permission)
+  );
 
   const levelTotals: LevelTotal[] = [
     { key: "p1", label: "ปวช.1", total: allPivotRowsForYear.reduce((sum, row) => sum + row.p1, 0) },
     { key: "p2", label: "ปวช.2", total: allPivotRowsForYear.reduce((sum, row) => sum + row.p2, 0) },
     { key: "p3", label: "ปวช.3", total: allPivotRowsForYear.reduce((sum, row) => sum + row.p3, 0) },
-    { key: "s1", label: "ปวส.1", total: allPivotRowsForYear.reduce((sum, row) => sum + row.s1, 0) },
-    { key: "s2", label: "ปวส.2", total: allPivotRowsForYear.reduce((sum, row) => sum + row.s2, 0) },
+    { key: "pvsDualYear1", label: "ปวส.ทวิ 1", total: allPivotRowsForYear.reduce((sum, row) => sum + row.pvsDualYear1, 0) },
+    { key: "pvsDualYear2", label: "ปวส.ทวิ 2", total: allPivotRowsForYear.reduce((sum, row) => sum + row.pvsDualYear2, 0) },
+    { key: "pvsAssociateYear1", label: "สมทบ 1", total: allPivotRowsForYear.reduce((sum, row) => sum + row.pvsAssociateYear1, 0) },
+    { key: "pvsAssociateYear2", label: "สมทบ 2", total: allPivotRowsForYear.reduce((sum, row) => sum + row.pvsAssociateYear2, 0) },
   ];
   const totalRegular = levelTotals.reduce((sum, row) => sum + row.total, 0);
   const totalPvc = levelTotals.slice(0, 3).reduce((sum, row) => sum + row.total, 0);
-  const totalPvs = levelTotals.slice(3).reduce((sum, row) => sum + row.total, 0);
+  const totalPvs = levelTotals.slice(3, 7).reduce((sum, row) => sum + row.total, 0);
   const totalShort = filteredShortRows.reduce((sum, row) => sum + Number(row.learner_count ?? 0), 0);
   const reportDate = formatThaiDate(yearRegularRows.find((row) => row.report_date)?.report_date);
   const exportHref = csvHref(pivotRows);
+  const managerRows = (rows: RawStudentEnrollment[]): StudentEnrollmentManagerRow[] =>
+    rows.map((row) => ({
+      id: row.id,
+      academicYear: row.academic_year,
+      reportDate: row.report_date,
+      levelLabel: row.level_label,
+      departmentName: row.department_name,
+      studentCount: Number(row.student_count ?? 0),
+      actualCount: row.actual_count,
+      registeredCount: row.registered_count,
+      maleCount: row.male_count,
+      femaleCount: row.female_count,
+      note: row.note,
+      sortOrder: Number(row.sort_order ?? 0),
+    }));
 
   return (
     <SiteShell active="students" settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
@@ -448,6 +504,7 @@ export default async function StudentsPage({
                 fields={enrollmentConfig.fields}
                 label="เพิ่ม ปวช./ปวส."
                 adminHref="/admin/modules/student_enrollments"
+                initialValues={{ academic_year: selectedYear, status: "active" }}
               />
             ) : null}
             {shortCourseConfig ? (
@@ -459,6 +516,7 @@ export default async function StudentsPage({
                 fields={shortCourseConfig.fields}
                 label="เพิ่มหลักสูตรระยะสั้น"
                 adminHref="/admin/modules/short_course_enrollments"
+                initialValues={{ academic_year: selectedYear, status: "active" }}
               />
             ) : null}
           </div>
@@ -466,8 +524,8 @@ export default async function StudentsPage({
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {statCard("นักเรียน นักศึกษาทั้งหมด", totalRegular + totalShort, "รวม ปวช. และ ปวส. ทุกชั้นปี", "รวมทุกระดับ", "blue")}
             {statCard("ระดับ ปวช.", totalPvc, "แสดงเป็นจำนวนรวมของระดับประกาศนียบัตรวิชาชีพ", "ปวช. 1-3", "orange")}
-            {statCard("ระดับ ปวส.", totalPvs, "แสดงเป็นจำนวนรวมของระดับประกาศนียบัตรวิชาชีพชั้นสูง", "ปวส. 1-2", "green")}
-            {statCard("ระดับชั้นที่แสดง", levelTotals.filter((item) => item.total > 0).length, "ปวช.1, ปวช.2, ปวช.3, ปวส.1 และ ปวส.2", "Public", "slate")}
+            {statCard("ระดับ ปวส.", totalPvs, "รวม ปวส.ทวิ ปี 1-2 และ ปวส.ภาคสมทบ ปี 1-2", "ปวส. 4 ช่อง", "green")}
+            {statCard("ระดับชั้นที่แสดง", levelTotals.filter((item) => item.total > 0).length, "ปวช.1-3, ปวส.ทวิ ปี 1-2 และสมทบ ปี 1-2", "Public", "slate")}
           </div>
 
           <form action="/students" className="rounded-lg border border-blue-100 bg-white p-3 shadow-sm shadow-blue-950/5">
@@ -492,8 +550,10 @@ export default async function StudentsPage({
                 <option value="p1">ปวช.1</option>
                 <option value="p2">ปวช.2</option>
                 <option value="p3">ปวช.3</option>
-                <option value="s1">ปวส.1</option>
-                <option value="s2">ปวส.2</option>
+                <option value="pvsDualYear1">ปวส.ทวิ ปี 1</option>
+                <option value="pvsDualYear2">ปวส.ทวิ ปี 2</option>
+                <option value="pvsAssociateYear1">ปวส.ภาคสมทบ ปี 1</option>
+                <option value="pvsAssociateYear2">ปวส.ภาคสมทบ ปี 2</option>
               </select>
               <select name="department" defaultValue={selectedDepartment} className="h-11 rounded-lg border border-blue-100 bg-white px-3 text-sm font-semibold text-slate-700 outline-none">
                 <option value="all">ทุกแผนก / สาขาวิชา</option>
@@ -548,55 +608,68 @@ export default async function StudentsPage({
                 </div>
 
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[980px] border-collapse text-sm">
+                  <table className="w-full table-fixed border-collapse text-[13px] xl:text-sm">
                     <thead>
                       <tr className="border-b border-blue-100 bg-slate-50 text-left text-xs font-bold text-slate-600">
-                        <th rowSpan={2} className="border-r border-blue-100 px-4 py-4">แผนก</th>
-                        <th rowSpan={2} className="border-r border-blue-100 px-4 py-4">สาขาวิชา / สาขางาน</th>
-                        <th colSpan={4} className="border-r border-blue-100 bg-blue-50 px-4 py-3 text-center text-blue-700">ระดับ ปวช.</th>
-                        <th colSpan={3} className="border-r border-blue-100 bg-emerald-50 px-4 py-3 text-center text-emerald-700">ระดับ ปวส.</th>
-                        <th rowSpan={2} className="px-4 py-4 text-center">รวมทั้งหมด</th>
+                        <th rowSpan={2} className="w-[14%] border-r border-blue-100 px-3 py-4">แผนก</th>
+                        <th rowSpan={2} className="w-[21%] border-r border-blue-100 px-3 py-4">สาขาวิชา / สาขางาน</th>
+                        <th colSpan={4} className="border-r border-blue-100 bg-blue-50 px-2 py-3 text-center text-blue-700">ระดับ ปวช.</th>
+                        <th colSpan={5} className="border-r border-blue-100 bg-emerald-50 px-2 py-3 text-center text-emerald-700">ระดับ ปวส.</th>
+                        <th rowSpan={2} className="w-[8%] px-2 py-4 text-center">รวมทั้งหมด</th>
+                        {canManageStudentEnrollments ? <th rowSpan={2} className="w-[11%] px-2 py-4 text-right">จัดการ</th> : null}
                       </tr>
                       <tr className="border-b border-blue-100 bg-slate-50 text-xs font-bold">
-                        <th className="bg-blue-50 px-3 py-3 text-center text-blue-700">ปวช.1</th>
-                        <th className="bg-blue-50 px-3 py-3 text-center text-blue-700">ปวช.2</th>
-                        <th className="bg-blue-50 px-3 py-3 text-center text-blue-700">ปวช.3</th>
-                        <th className="border-r border-blue-100 bg-amber-50 px-3 py-3 text-center text-amber-700">รวม ปวช.</th>
-                        <th className="bg-emerald-50 px-3 py-3 text-center text-emerald-700">ปวส.1</th>
-                        <th className="bg-emerald-50 px-3 py-3 text-center text-emerald-700">ปวส.2</th>
-                        <th className="border-r border-blue-100 bg-amber-50 px-3 py-3 text-center text-amber-700">รวม ปวส.</th>
+                        <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.1</th>
+                        <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.2</th>
+                        <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.3</th>
+                        <th className="border-r border-blue-100 bg-amber-50 px-2 py-3 text-center text-amber-700">รวม ปวช.</th>
+                        <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">ทวิ<br />ปี 1</th>
+                        <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">ทวิ<br />ปี 2</th>
+                        <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">สมทบ<br />ปี 1</th>
+                        <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">สมทบ<br />ปี 2</th>
+                        <th className="border-r border-blue-100 bg-amber-50 px-2 py-3 text-center text-amber-700">รวม ปวส.</th>
                       </tr>
                     </thead>
                     <tbody>
                       {pivotRows.map((row) => (
                         <tr key={row.department} className="border-b border-blue-50 text-slate-700 hover:bg-blue-50/60">
-                          <td className="border-r border-blue-50 px-4 py-3 font-bold text-slate-950">{row.department}</td>
-                          <td className="border-r border-blue-50 px-4 py-3">
+                          <td className="border-r border-blue-50 px-3 py-3 font-bold leading-5 text-slate-950">{row.department}</td>
+                          <td className="border-r border-blue-50 px-3 py-3 leading-5">
                             <Link href={buildHref({ year: selectedYear, metric: selectedMetric, q: searchText, level: selectedLevel, department: selectedDepartment, focus: row.department })} className="font-medium hover:text-blue-700 hover:underline">
                               {row.branch}
                             </Link>
                           </td>
-                          <td className="px-3 py-3 text-center">{valueCell(row.p1)}</td>
-                          <td className="px-3 py-3 text-center">{valueCell(row.p2)}</td>
-                          <td className="px-3 py-3 text-center">{valueCell(row.p3)}</td>
-                          <td className="border-r border-blue-50 bg-amber-50/70 px-3 py-3 text-center font-semibold text-amber-700">{valueCell(row.pvcTotal)}</td>
-                          <td className="px-3 py-3 text-center">{valueCell(row.s1)}</td>
-                          <td className="px-3 py-3 text-center">{valueCell(row.s2)}</td>
-                          <td className="border-r border-blue-50 bg-amber-50/70 px-3 py-3 text-center font-semibold text-amber-700">{valueCell(row.pvsTotal)}</td>
-                          <td className="bg-blue-50/70 px-3 py-3 text-center font-bold text-blue-700">{valueCell(row.total)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.p1)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.p2)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.p3)}</td>
+                          <td className="border-r border-blue-50 bg-amber-50/70 px-2 py-3 text-center font-semibold text-amber-700">{valueCell(row.pvcTotal)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.pvsDualYear1)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.pvsDualYear2)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.pvsAssociateYear1)}</td>
+                          <td className="px-2 py-3 text-center">{valueCell(row.pvsAssociateYear2)}</td>
+                          <td className="border-r border-blue-50 bg-amber-50/70 px-2 py-3 text-center font-semibold text-amber-700">{valueCell(row.pvsTotal)}</td>
+                          <td className="bg-blue-50/70 px-2 py-3 text-center font-bold text-blue-700">{valueCell(row.total)}</td>
+                          {canManageStudentEnrollments ? (
+                            <td className="px-2 py-3 text-right">
+                              <StudentEnrollmentManager academicYear={selectedYear} department={row.department} rows={managerRows(row.rows)} compact />
+                            </td>
+                          ) : null}
                         </tr>
                       ))}
                       <tr className="bg-slate-950 text-white">
-                        <td className="border-r border-slate-700 px-4 py-3 font-bold">รวมทุกแผนก</td>
-                        <td className="border-r border-slate-700 px-4 py-3">รวมทุกสาขาวิชา</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(levelTotals[0]?.total)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(levelTotals[1]?.total)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(levelTotals[2]?.total)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(totalPvc)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(levelTotals[3]?.total)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(levelTotals[4]?.total)}</td>
-                        <td className="px-3 py-3 text-center">{toThaiNumber(totalPvs)}</td>
-                        <td className="px-3 py-3 text-center font-bold">{toThaiNumber(totalRegular)}</td>
+                        <td className="border-r border-slate-700 px-3 py-3 font-bold">รวมทุกแผนก</td>
+                        <td className="border-r border-slate-700 px-3 py-3">รวมทุกสาขาวิชา</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[0]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[1]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[2]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(totalPvc)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[3]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[4]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[5]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(levelTotals[6]?.total)}</td>
+                        <td className="px-2 py-3 text-center">{toThaiNumber(totalPvs)}</td>
+                        <td className="px-2 py-3 text-center font-bold">{toThaiNumber(totalRegular)}</td>
+                        {canManageStudentEnrollments ? <td className="px-3 py-3" /> : null}
                       </tr>
                     </tbody>
                   </table>
@@ -646,8 +719,10 @@ export default async function StudentsPage({
                               ["ปวช.1", focusedRow.p1],
                               ["ปวช.2", focusedRow.p2],
                               ["ปวช.3", focusedRow.p3],
-                              ["ปวส.1", focusedRow.s1],
-                              ["ปวส.2", focusedRow.s2],
+                              ["ปวส.ทวิ ปี 1", focusedRow.pvsDualYear1],
+                              ["ปวส.ทวิ ปี 2", focusedRow.pvsDualYear2],
+                              ["ปวส.ภาคสมทบ ปี 1", focusedRow.pvsAssociateYear1],
+                              ["ปวส.ภาคสมทบ ปี 2", focusedRow.pvsAssociateYear2],
                             ].map(([label, value]) => (
                               <tr key={String(label)}>
                                 <td className="px-3 py-3 text-slate-600">{label}</td>
@@ -660,26 +735,11 @@ export default async function StudentsPage({
                             </tr>
                           </tbody>
                         </table>
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          {focusedRow.rows.map((row) => {
-                            const crudRow = row.id > 0 ? crudRowsById.get(row.id) : undefined;
-                            return crudRow && enrollmentConfig ? (
-                              <AdminCrudTools
-                                key={row.id}
-                                user={adminUser}
-                                permission={enrollmentConfig.permission}
-                                moduleKey={enrollmentConfig.key}
-                                moduleLabel={enrollmentConfig.label}
-                                fields={enrollmentConfig.fields}
-                                row={crudRow}
-                                label={`จัดการ ${row.level_label}`}
-                                triggerSize="sm"
-                                adminHref="/admin/modules/student_enrollments"
-                                afterDeleteHref="/admin/modules/student_enrollments"
-                              />
-                            ) : null;
-                          })}
-                        </div>
+                        {canManageStudentEnrollments ? (
+                          <div className="mt-4">
+                            <StudentEnrollmentManager academicYear={selectedYear} department={focusedRow.department} rows={managerRows(focusedRow.rows)} />
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   ) : (
