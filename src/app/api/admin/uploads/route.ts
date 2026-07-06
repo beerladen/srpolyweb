@@ -49,7 +49,7 @@ const allowedDocumentExtensions = new Set([
   "gif",
 ]);
 
-const maxImageUploadBytes = 5 * 1024 * 1024;
+const maxImageUploadBytes = 15 * 1024 * 1024;
 const maxDocumentUploadBytes = 20 * 1024 * 1024;
 
 function isImageUploadField(fieldType?: string): boolean {
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
   const isImageField = isImageUploadField(field.type);
 
   if (isImageField && file.size > maxImageUploadBytes) {
-    return NextResponse.json({ message: "ไฟล์ภาพต้องไม่เกิน 5MB" }, { status: 400 });
+    return NextResponse.json({ message: "ไฟล์ภาพต้องไม่เกิน 15MB" }, { status: 400 });
   }
 
   if (!isImageField && file.size > maxDocumentUploadBytes) {
