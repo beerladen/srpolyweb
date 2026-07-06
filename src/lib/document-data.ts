@@ -182,6 +182,7 @@ function buildStats(
 }
 
 export async function getDownloadDocuments(limit = 200): Promise<DownloadDocument[]> {
+  const safeLimit = Math.max(1, Math.min(500, Math.floor(Number.isFinite(limit) ? limit : 200)));
   const rows = await queryRows<RawDownloadDocument>(
     `SELECT d.id, d.title, d.description, d.content, d.category_id,
             c.name AS category_name, c.slug AS category_slug,
@@ -193,8 +194,7 @@ export async function getDownloadDocuments(limit = 200): Promise<DownloadDocumen
      LEFT JOIN categories c ON c.id = d.category_id
      WHERE d.public_status = 'published'
      ORDER BY d.is_featured DESC, d.sort_order ASC, d.download_count DESC, COALESCE(d.published_at, d.updated_at) DESC, d.id DESC
-     LIMIT ?`,
-    [limit]
+     LIMIT ${safeLimit}`
   );
 
   return rows?.length ? rows.map(mapDownloadDocument) : fallbackDocuments;
