@@ -3,6 +3,7 @@ import {
   BookOpen,
   Building2,
   ClipboardCheck,
+  DatabaseBackup,
   FileText,
   Home,
   Landmark,
@@ -71,6 +72,7 @@ export const sidebarData: NavSection[] = [
     title: "ระบบ",
     items: [
       { title: "ผู้ใช้งาน / สิทธิ์", href: "/admin/users", icon: Users, permission: "users" },
+      { title: "สำรองข้อมูล", href: "/admin/backup", icon: DatabaseBackup, permission: "users" },
       { title: "เรื่องร้องเรียน", href: "/admin/complaints", icon: MessageSquareWarning, permission: "complaints", badge: "1" },
       { title: "ตั้งค่าเว็บไซต์", href: "/admin/settings", icon: Settings, permission: "site_blocks" },
     ],
