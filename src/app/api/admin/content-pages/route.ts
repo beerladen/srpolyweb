@@ -8,13 +8,35 @@ const allowedStatuses = new Set(["published", "draft", "review", "archived"]);
 function normalizeSlug(value: string, fallback: string): string {
   const source = value.trim() || fallback.trim() || `page-${Date.now()}`;
   const slug = source
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/['"]/g, "")
-    .replace(/[^a-z0-9ก-๙]+/gi, "-")
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 150);
+    .slice(0, 150)
+    .replace(/-+$/g, "");
 
   return slug || `page-${Date.now()}`;
+}
+
+async function makeUniqueSlug(baseSlug: string): Promise<string> {
+  let candidate = baseSlug;
+
+  for (let suffix = 2; suffix < 200; suffix += 1) {
+    const duplicate = await queryRows<{ id: number }>(
+      "SELECT id FROM content_pages WHERE slug = ? LIMIT 1",
+      [candidate]
+    );
+
+    if (!duplicate?.length) {
+      return candidate;
+    }
+
+    candidate = `${baseSlug}-${suffix}`;
+  }
+
+  return `${baseSlug}-${Date.now().toString(36)}`;
 }
 
 function normalizeStatus(value: unknown): string {
@@ -49,7 +71,7 @@ export async function POST(request: Request) {
 
   const payload = await request.json().catch(() => null);
   const title = String(payload?.title ?? "").trim();
-  const slug = normalizeSlug(String(payload?.slug ?? ""), title);
+  const slug = await makeUniqueSlug(normalizeSlug(String(payload?.slug ?? ""), title));
   const summary = String(payload?.summary ?? "").trim();
   const body = String(payload?.body ?? "").trim();
   const contentType = String(payload?.contentType ?? "general").trim() || "general";
@@ -61,15 +83,6 @@ export async function POST(request: Request) {
 
   if (!title) {
     return NextResponse.json({ message: "กรุณาระบุหัวข้อ" }, { status: 400 });
-  }
-
-  const duplicate = await queryRows<{ id: number }>(
-    "SELECT id FROM content_pages WHERE slug = ? LIMIT 1",
-    [slug]
-  );
-
-  if (duplicate?.length) {
-    return NextResponse.json({ message: "slug นี้ถูกใช้แล้ว กรุณาเปลี่ยน URL" }, { status: 409 });
   }
 
   const created = await executeSqlResult(

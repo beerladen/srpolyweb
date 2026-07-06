@@ -1,6 +1,8 @@
 import { queryRows } from "@/lib/db";
 import { getOit2569Item, itaCodeNumber, oit2569Items } from "@/lib/ita-oit-2569";
 import { normalizeLegacyUrl, publicAssetPath } from "@/lib/legacy-paths";
+import { parseLinkItems, parseMediaItems, type MediaItem, type MediaLinkItem } from "@/lib/media-fields";
+import { defaultThemePresetId, isThemePresetId, type SiteThemePresetId } from "@/lib/site-theme";
 
 export type NavItem = {
   id?: number;
@@ -30,6 +32,10 @@ export type ContentItem = {
   image?: string;
   metric?: string;
   isFeatured?: boolean;
+  galleryImages?: MediaItem[];
+  attachments?: MediaItem[];
+  externalLinks?: MediaLinkItem[];
+  syncToDownloads?: boolean;
 };
 
 export type NewsCategory = {
@@ -96,6 +102,7 @@ export type SiteSettings = {
   contactPhone: string;
   contactFax: string;
   address: string;
+  themePreset: SiteThemePresetId;
 };
 
 export type SiteOverview = {
@@ -166,7 +173,32 @@ type RawNews = {
   category_slug: string | null;
   is_featured?: number | null;
   featured_sort_order?: number | null;
+  gallery_images?: string | null;
+  attachment_files?: string | null;
+  external_links?: string | null;
+  sync_to_downloads?: number | null;
 };
+
+let optionalNewsMediaSelectCache: string | null = null;
+
+async function getOptionalNewsMediaSelect(): Promise<string> {
+  if (optionalNewsMediaSelectCache !== null) {
+    return optionalNewsMediaSelectCache;
+  }
+
+  const rows = await queryRows<{ Field: string }>("SHOW COLUMNS FROM news");
+  const columns = new Set(rows?.map((row) => row.Field) ?? []);
+  const optionalColumns = ["gallery_images", "attachment_files", "external_links", "sync_to_downloads"];
+  const selectClause = optionalColumns
+    .map((column) => (columns.has(column) ? `n.${column}` : `NULL AS ${column}`))
+    .join(", ");
+
+  if (optionalColumns.every((column) => columns.has(column))) {
+    optionalNewsMediaSelectCache = selectClause;
+  }
+
+  return selectClause;
+}
 
 const settingsFallback: SiteSettings = {
   collegeName: "วิทยาลัยสารพัดช่างสุรินทร์",
@@ -176,6 +208,7 @@ const settingsFallback: SiteSettings = {
   contactPhone: "044-514414",
   contactFax: "044-519343",
   address: "778 หมู่ 20 บ้านหนองโตงพัฒนา ตำบลนอกเมือง อำเภอเมืองสุรินทร์ จังหวัดสุรินทร์ 32000",
+  themePreset: defaultThemePresetId,
 };
 
 const navigationFallback: NavItem[] = [
@@ -236,7 +269,7 @@ const quickLinksFallback: QuickLink[] = [
   { itemKey: "dve-data", label: "DVE-DATA", href: "#" },
   { itemKey: "movec", label: "M-OVEC", href: "#" },
   { itemKey: "quality", label: "งานประกันคุณภาพ", href: "/plans" },
-  { itemKey: "budget-report", label: "รายงานงบทดลอง", href: "/procurement" },
+  { itemKey: "budget-report", label: "รายงานงบทดลอง", href: "/trial-balance" },
 ];
 
 const contentPagesFallback: ContentPageItem[] = [
@@ -532,6 +565,7 @@ export const adminModules: AdminModule[] = [
   { key: "documents", label: "ดาวน์โหลดเอกสาร / แบบฟอร์ม", table: "documents", permission: "documents", description: "ศูนย์ดาวน์โหลดเอกสาร คำร้อง แบบฟอร์ม คู่มือ และไฟล์บริการผู้เรียน" },
   { key: "legal_items", label: "กฎหมายและระเบียบ", table: "legal_items", permission: "content_pages", description: "จัดการกฎหมาย ระเบียบ ไฟล์แนบ และลิงก์อ้างอิงที่แสดงบนหน้าเกี่ยวกับวิทยาลัย" },
   { key: "procurement", label: "จัดซื้อจัดจ้าง / พัสดุ", table: "procurement", permission: "procurement", description: "แผนจัดซื้อจัดจ้าง ราคากลาง และผลจัดซื้อจัดจ้าง" },
+  { key: "trial_balance_reports", label: "รายงานงบทดลอง", table: "procurement", permission: "finance", description: "จัดการรายงานงบทดลอง ไฟล์แนบ ปีงบประมาณ และจำนวนดาวน์โหลด" },
   { key: "plans", label: "แผนและรายงาน", table: "plans_reports", permission: "plans", description: "แผนปฏิบัติราชการ รายงาน SAR และรายงานควบคุมภายใน" },
   { key: "services", label: "บริการออนไลน์", table: "services", permission: "services", description: "บริการ E-Service ลิงก์บริการ และขั้นตอนให้บริการ" },
   { key: "ita", label: "Mapping ITA / OIT", table: "ita_mapping", permission: "ita", description: "ติดตามความพร้อมข้อมูลสาธารณะตามตัวชี้วัด" },
@@ -584,6 +618,7 @@ function applySettings(rows: RawSetting[] | null): SiteSettings {
     contactPhone: values.contact_phone ?? settingsFallback.contactPhone,
     contactFax: values.contact_fax ?? settingsFallback.contactFax,
     address: values.address ?? settingsFallback.address,
+    themePreset: isThemePresetId(values.theme_preset) ? values.theme_preset : settingsFallback.themePreset,
   };
 }
 
@@ -601,6 +636,14 @@ function normalizeDate(value: RawDate): string | undefined {
   }
 
   return String(value).slice(0, 10);
+}
+
+function safeDecodeUrlSegment(value: string): string {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
 }
 
 function parseLineList(value: string | null | undefined): string[] {
@@ -666,10 +709,15 @@ function mapNews(row: RawNews): ContentItem {
     image: publicAssetPath(row.cover_image) ?? publicAssetPath("/assets/images/hero-campus.png"),
     metric: row.view_count ? `${row.view_count.toLocaleString("th-TH")} ครั้ง` : undefined,
     isFeatured: Boolean(Number(row.is_featured ?? 0)),
+    galleryImages: parseMediaItems(row.gallery_images),
+    attachments: parseMediaItems(row.attachment_files),
+    externalLinks: parseLinkItems(row.external_links),
+    syncToDownloads: Boolean(Number(row.sync_to_downloads ?? 0)),
   };
 }
 
 export async function getSiteOverview(): Promise<SiteOverview> {
+  const newsMediaSelect = await getOptionalNewsMediaSelect();
   const [
     settingsRows,
     navigationRows,
@@ -699,7 +747,7 @@ export async function getSiteOverview(): Promise<SiteOverview> {
     queryRows<RawNews>(
       `SELECT n.id, n.title, n.slug, n.cover_image, n.summary, n.content, n.status, n.published_at, n.view_count,
               n.category_id, c.name AS category_name, c.slug AS category_slug,
-              n.is_featured, n.featured_sort_order
+              n.is_featured, n.featured_sort_order, ${newsMediaSelect}
        FROM news n
        LEFT JOIN categories c ON c.id = n.category_id
        WHERE n.status = 'published'
@@ -710,7 +758,7 @@ export async function getSiteOverview(): Promise<SiteOverview> {
       "SELECT id, title, description, fiscal_year, department, file_type, public_status, published_at, ita_code FROM documents WHERE public_status = 'published' ORDER BY COALESCE(published_at, updated_at) DESC LIMIT 8"
     ),
     queryRows<{ id: number; title: string; type: string | null; fiscal_year: string | null; budget: number | null; status: string; published_at: RawDate }>(
-      "SELECT id, title, type, fiscal_year, budget, status, published_at FROM procurement WHERE status = 'published' ORDER BY COALESCE(published_at, updated_at) DESC LIMIT 6"
+      "SELECT id, title, type, fiscal_year, budget, status, published_at FROM procurement WHERE status = 'published' AND COALESCE(type, '') <> 'รายงานงบทดลอง' ORDER BY COALESCE(published_at, updated_at) DESC LIMIT 6"
     ),
     queryRows<{ id: number; title: string; report_type: string | null; fiscal_year: string | null; department: string | null; status: string; published_at: RawDate }>(
       "SELECT id, title, report_type, fiscal_year, department, status, published_at FROM plans_reports WHERE status = 'published' ORDER BY COALESCE(published_at, updated_at) DESC LIMIT 6"
@@ -853,15 +901,22 @@ export async function getContentPage(slug: string): Promise<ContentPageItem | un
 }
 
 export async function getNewsItem(slugOrId: string): Promise<ContentItem | undefined> {
+  const newsMediaSelect = await getOptionalNewsMediaSelect();
+  const rawSlug = String(slugOrId ?? "").trim();
+  const decodedSlug = safeDecodeUrlSegment(rawSlug);
+  const lookupSlugs = Array.from(new Set([rawSlug, decodedSlug].filter(Boolean)));
+  const safeLookupSlugs = lookupSlugs.length ? lookupSlugs : [""];
+  const slugPlaceholders = safeLookupSlugs.map(() => "?").join(", ");
+  const numericId = Number(decodedSlug || rawSlug) || 0;
   const rows = await queryRows<RawNews>(
     `SELECT n.id, n.title, n.slug, n.cover_image, n.summary, n.content, n.status, n.published_at, n.view_count,
             n.category_id, c.name AS category_name, c.slug AS category_slug,
-            n.is_featured, n.featured_sort_order
+            n.is_featured, n.featured_sort_order, ${newsMediaSelect}
      FROM news n
      LEFT JOIN categories c ON c.id = n.category_id
-     WHERE n.status = 'published' AND (n.slug = ? OR n.id = ?)
+     WHERE n.status = 'published' AND (n.slug IN (${slugPlaceholders}) OR n.id = ?)
      LIMIT 1`,
-    [slugOrId, Number(slugOrId) || 0]
+    [...safeLookupSlugs, numericId]
   );
 
   return rows?.[0] ? mapNews(rows[0]) : undefined;

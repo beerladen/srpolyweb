@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
 import {
   createAdminCrudItem,
+  ensureGeneratedUniqueFields,
   findAdminCrudDuplicate,
   getAdminCrudAvailableConfig,
   getAdminCrudRow,
@@ -69,13 +70,14 @@ export async function POST(
     return NextResponse.json({ message: normalized.message }, { status: 400 });
   }
 
-  const duplicateField = await findAdminCrudDuplicate(access.config, normalized.values);
+  const values = await ensureGeneratedUniqueFields(access.config, normalized.values);
+  const duplicateField = await findAdminCrudDuplicate(access.config, values);
 
   if (duplicateField) {
     return NextResponse.json({ message: `${duplicateField}นี้ถูกใช้แล้ว` }, { status: 409 });
   }
 
-  const created = await createAdminCrudItem(access.config, normalized.values);
+  const created = await createAdminCrudItem(access.config, values);
 
   if (!created) {
     return NextResponse.json({ message: "ยังสร้างรายการไม่ได้" }, { status: 503 });

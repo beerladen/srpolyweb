@@ -61,6 +61,7 @@ export const sidebarData: NavSection[] = [
       { title: "ดาวน์โหลดเอกสาร", href: "/admin/modules/documents", icon: FileText, permission: "documents" },
       { title: "กฎหมายและระเบียบ", href: "/admin/modules/legal_items", icon: FileText, permission: "content_pages" },
       { title: "จัดซื้อจัดจ้าง", href: "/admin/modules/procurement", icon: Landmark, permission: "procurement" },
+      { title: "รายงานงบทดลอง", href: "/admin/modules/trial_balance_reports", icon: FileText, permission: "finance" },
       { title: "แผนและรายงาน", href: "/admin/modules/plans", icon: ClipboardCheck, permission: "plans" },
       { title: "บริการออนไลน์", href: "/admin/modules/services", icon: ShieldCheck, permission: "services" },
       { title: "ITA / OIT", href: "/admin/modules/ita", icon: ShieldCheck, permission: "ita" },

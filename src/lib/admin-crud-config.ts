@@ -1,4 +1,16 @@
-export type AdminCrudFieldType = "text" | "textarea" | "number" | "date" | "datetime" | "select" | "switch" | "image" | "file";
+export type AdminCrudFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "datetime"
+  | "select"
+  | "switch"
+  | "image"
+  | "file"
+  | "gallery"
+  | "files"
+  | "links";
 
 export type AdminCrudValue = string | number | boolean | null;
 
@@ -18,7 +30,11 @@ export type AdminCrudField = {
   description?: string;
   span?: "full" | "half";
   optionalColumn?: boolean;
+  hidden?: boolean;
+  autoGenerate?: "slug";
+  sourceField?: string;
   uploadFolder?: "images" | "news" | "personnel" | "documents";
+  uploadHint?: string;
   optionsSource?: "news_categories" | "document_categories";
 };
 
@@ -102,7 +118,7 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     updatedAt: true,
     fields: [
       { name: "title", label: "หัวข้อ", type: "text", required: true },
-      { name: "slug", label: "URL slug", type: "text", required: true, placeholder: "administrative-structure" },
+      { name: "slug", label: "URL slug", type: "text", required: true, hidden: true, autoGenerate: "slug", sourceField: "title", placeholder: "administrative-structure" },
       { name: "content_type", label: "ชนิดหน้า", type: "text", optionalColumn: true, placeholder: "general / structure / people / ita" },
       { name: "nav_key", label: "ผูกกับเมนูหลัก", type: "text", placeholder: "about" },
       { name: "summary", label: "คำอธิบายสั้น", type: "textarea", span: "full" },
@@ -181,7 +197,15 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
       { name: "title", label: "หัวข้อ", type: "text", required: true },
       { name: "subtitle", label: "คำโปรย", type: "textarea", span: "full" },
       { name: "body", label: "รายละเอียด", type: "textarea", span: "full" },
-      { name: "image_path", label: "ภาพประกอบ", type: "image", uploadFolder: "images", placeholder: "assets/images/hero-campus.png" },
+      {
+        name: "image_path",
+        label: "ภาพประกอบ",
+        type: "image",
+        uploadFolder: "images",
+        placeholder: "assets/images/hero-campus.png",
+        span: "full",
+        uploadHint: "ภาพ Hero แนะนำขนาด 1920 x 720 px หรืออัตราส่วนประมาณ 8:3 ใช้ JPG/WebP ไม่เกิน 2 MB และวางจุดสำคัญของภาพไว้ฝั่งขวาเพื่อไม่ชนข้อความ",
+      },
       { name: "primary_label", label: "ปุ่มหลัก", type: "text" },
       { name: "primary_url", label: "ลิงก์ปุ่มหลัก", type: "text" },
       { name: "secondary_label", label: "ปุ่มรอง", type: "text" },
@@ -383,11 +407,12 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     uniqueFields: ["slug"],
     fields: [
       { name: "name", label: "ชื่อหมวดข่าว", type: "text", required: true, placeholder: "ประชาสัมพันธ์ทั่วไป" },
-      { name: "slug", label: "รหัสหมวด", type: "text", required: true, placeholder: "general" },
+      { name: "slug", label: "รหัสหมวด", type: "text", required: true, hidden: true, autoGenerate: "slug", sourceField: "name", placeholder: "general" },
       {
         name: "type",
         label: "ชนิดหมวด",
         type: "select",
+        hidden: true,
         defaultValue: "news",
         options: [{ value: "news", label: "ข่าว" }],
       },
@@ -410,11 +435,12 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     uniqueFields: ["slug"],
     fields: [
       { name: "name", label: "ชื่อหมวดเอกสาร", type: "text", required: true, placeholder: "แบบฟอร์มงานทะเบียน" },
-      { name: "slug", label: "รหัสหมวด", type: "text", required: true, placeholder: "registration-forms" },
+      { name: "slug", label: "รหัสหมวด", type: "text", required: true, hidden: true, autoGenerate: "slug", sourceField: "name", placeholder: "registration-forms" },
       {
         name: "type",
         label: "ชนิดหมวด",
         type: "select",
+        hidden: true,
         defaultValue: "document",
         options: [{ value: "document", label: "ดาวน์โหลดเอกสาร" }],
       },
@@ -441,16 +467,57 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     updatedAt: true,
     fields: [
       { name: "title", label: "หัวข้อข่าว", type: "text", required: true },
-      { name: "slug", label: "URL slug", type: "text", required: true, placeholder: "news-title" },
+      { name: "slug", label: "URL slug", type: "text", required: true, hidden: true, autoGenerate: "slug", sourceField: "title", placeholder: "news-title" },
       { name: "category_id", label: "หมวดข่าว", type: "select", optionsSource: "news_categories" },
-      { name: "cover_image", label: "ภาพปก", type: "image", uploadFolder: "news", placeholder: "assets/images/news.jpg" },
+      {
+        name: "cover_image",
+        label: "ภาพปก",
+        type: "image",
+        uploadFolder: "news",
+        placeholder: "assets/images/news.jpg",
+        uploadHint: "ภาพปกข่าวแนะนำ 1200 x 675 px อัตราส่วน 16:9 ใช้ JPG/WebP เพื่อให้ภาพเด่นและรายการข่าวแสดงสวยเท่ากัน",
+      },
+      {
+        name: "gallery_images",
+        label: "ภาพประกอบข่าวหลายภาพ",
+        type: "gallery",
+        uploadFolder: "news",
+        span: "full",
+        optionalColumn: true,
+        uploadHint: "ภาพประกอบข่าวแนะนำกว้างอย่างน้อย 1200 px ใช้ JPG/WebP และเลือกภาพชุดเดียวกันเพื่อให้กริดภาพย่อดูสม่ำเสมอ",
+        description: "อัปโหลดภาพกิจกรรมหรือภาพประกอบได้หลายภาพ ระบบจะแสดงเป็นกริดภาพย่อในหน้าข่าว",
+      },
       { name: "summary", label: "คำอธิบายสั้น", type: "textarea", span: "full" },
       { name: "content", label: "เนื้อหาข่าว", type: "textarea", span: "full" },
+      {
+        name: "attachment_files",
+        label: "ไฟล์แนบ / PDF / เอกสารดาวน์โหลด",
+        type: "files",
+        uploadFolder: "documents",
+        span: "full",
+        optionalColumn: true,
+        description: "แนบ PDF, Word, Excel, PowerPoint, ZIP หรือรูปภาพได้หลายไฟล์ ผู้อ่านจะดาวน์โหลดได้จากหน้าข่าว",
+      },
+      {
+        name: "external_links",
+        label: "ลิงก์ที่เกี่ยวข้อง",
+        type: "links",
+        span: "full",
+        optionalColumn: true,
+        description: "ใส่ 1 รายการต่อ 1 บรรทัด เช่น ชื่อเว็บไซต์ | https://example.com",
+      },
+      {
+        name: "sync_to_downloads",
+        label: "แสดงไฟล์แนบข่าวในเมนูดาวน์โหลดเอกสาร",
+        type: "switch",
+        defaultValue: true,
+        optionalColumn: true,
+      },
       { name: "is_featured", label: "แสดงเป็นข่าวเด่น", type: "switch", defaultValue: false, optionalColumn: true },
       { name: "featured_sort_order", label: "ลำดับข่าวเด่น", type: "number", defaultValue: 0, optionalColumn: true },
       commonPublishedField,
       { name: "published_at", label: "วันที่เผยแพร่", type: "datetime" },
-      { name: "view_count", label: "จำนวนเข้าชม", type: "number", defaultValue: 0 },
+      { name: "view_count", label: "จำนวนเข้าชม", type: "number", defaultValue: 0, hidden: true },
     ],
   },
   {
@@ -571,7 +638,7 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     metricSuffix: "บาท",
     hrefTemplate: "/procurement/{id}",
     hrefFallback: "/procurement",
-    orderBy: "ORDER BY COALESCE(published_at, updated_at) DESC, id DESC",
+    orderBy: "WHERE COALESCE(type, '') <> 'รายงานงบทดลอง' ORDER BY COALESCE(published_at, updated_at) DESC, id DESC",
     updatedAt: true,
     fields: [
       { name: "title", label: "ชื่อรายการ", type: "text", required: true },
@@ -582,6 +649,35 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
       { name: "department", label: "หน่วยงาน", type: "text", optionalColumn: true },
       { name: "budget", label: "งบประมาณ", type: "number" },
       { name: "file_path", label: "ไฟล์ / ลิงก์", type: "file", uploadFolder: "documents" },
+      { name: "download_count", label: "จำนวนดาวน์โหลด", type: "number", defaultValue: 0, optionalColumn: true },
+      commonPublishedField,
+      { name: "published_at", label: "วันที่เผยแพร่", type: "datetime" },
+    ],
+  },
+  {
+    key: "trial_balance_reports",
+    label: "รายงานงบทดลอง",
+    table: "procurement",
+    permission: "finance",
+    titleField: "title",
+    descriptionField: "summary",
+    categoryField: "fiscal_year",
+    statusField: "status",
+    metricField: "download_count",
+    metricSuffix: "ครั้ง",
+    hrefTemplate: "/trial-balance/{id}",
+    hrefFallback: "/trial-balance",
+    orderBy: "WHERE type = 'รายงานงบทดลอง' ORDER BY fiscal_year DESC, COALESCE(published_at, updated_at) DESC, id DESC",
+    updatedAt: true,
+    fields: [
+      { name: "title", label: "ชื่อรายงาน", type: "text", required: true },
+      { name: "summary", label: "คำอธิบายสั้น", type: "textarea", span: "full", optionalColumn: true },
+      { name: "content", label: "รายละเอียดรายงาน", type: "textarea", span: "full", optionalColumn: true },
+      { name: "type", label: "ประเภทรายงาน", type: "text", hidden: true, defaultValue: "รายงานงบทดลอง" },
+      { name: "fiscal_year", label: "ปีงบประมาณ", type: "text", required: true, placeholder: "2569" },
+      { name: "department", label: "หน่วยงานรับผิดชอบ", type: "text", defaultValue: "งานการเงิน", optionalColumn: true },
+      { name: "budget", label: "งบประมาณ / หมายเหตุเป็นตัวเลข", type: "number", defaultValue: 0 },
+      { name: "file_path", label: "ไฟล์ / ลิงก์รายงาน", type: "file", uploadFolder: "documents" },
       { name: "download_count", label: "จำนวนดาวน์โหลด", type: "number", defaultValue: 0, optionalColumn: true },
       commonPublishedField,
       { name: "published_at", label: "วันที่เผยแพร่", type: "datetime" },

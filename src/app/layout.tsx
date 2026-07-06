@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
+import { getSiteThemePreset, themeTokensToStyle } from "@/lib/site-theme";
 import "./globals.css";
 
 const notoSansThai = Noto_Sans_Thai({
@@ -13,13 +14,20 @@ export const metadata: Metadata = {
   description: "ระบบเว็บไซต์และหลังบ้าน ITA วิทยาลัยสารพัดช่างสุรินทร์",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themePreset = await getSiteThemePreset();
+
   return (
-    <html lang="th">
+    <html
+      lang="th"
+      className={themePreset.mode === "dark" ? "dark" : undefined}
+      style={themeTokensToStyle(themePreset)}
+      suppressHydrationWarning
+    >
       <body className={`${notoSansThai.variable} font-sans antialiased`}>
         {children}
       </body>

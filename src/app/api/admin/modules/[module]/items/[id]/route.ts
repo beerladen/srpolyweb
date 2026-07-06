@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
 import {
   deleteAdminCrudItem,
+  ensureGeneratedUniqueFields,
   findAdminCrudDuplicate,
   getAdminCrudAvailableConfig,
   getAdminCrudRawRow,
@@ -96,13 +97,14 @@ export async function PATCH(
     return NextResponse.json({ message: normalized.message }, { status: 400 });
   }
 
-  const duplicateField = await findAdminCrudDuplicate(access.config, normalized.values, itemId);
+  const values = await ensureGeneratedUniqueFields(access.config, normalized.values, itemId);
+  const duplicateField = await findAdminCrudDuplicate(access.config, values, itemId);
 
   if (duplicateField) {
     return NextResponse.json({ message: `${duplicateField}นี้ถูกใช้แล้ว` }, { status: 409 });
   }
 
-  const saved = await updateAdminCrudItem(access.config, itemId, normalized.values);
+  const saved = await updateAdminCrudItem(access.config, itemId, values);
 
   if (!saved) {
     return NextResponse.json({ message: "ยังบันทึกข้อมูลไม่ได้" }, { status: 503 });

@@ -84,6 +84,19 @@ function stringValue(value: unknown): string | undefined {
   return String(value);
 }
 
+function slugify(value: unknown, fallback: string): string {
+  const normalized = String(value ?? "")
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 90)
+    .replace(/-+$/g, "");
+
+  return normalized || `${fallback}-${Date.now().toString(36)}`;
+}
+
 function buildHref(config: AdminCrudModuleConfig, row: RawCrudRow): string {
   if (config.hrefTemplate) {
     return config.hrefTemplate.replace(/\{(\w+)\}/g, (_match, key: string) => {
@@ -369,10 +382,35 @@ export function normalizeAdminCrudPayload(
     return { ok: false, message: "ข้อมูลที่ส่งมาไม่ถูกต้อง" };
   }
 
+  const effectivePayload = { ...payload };
+
+  for (const field of config.fields) {
+    if (field.autoGenerate !== "slug") {
+      continue;
+    }
+
+    const currentValue = String(effectivePayload[field.name] ?? "").trim();
+
+    if (currentValue) {
+      effectivePayload[field.name] = slugify(currentValue, config.key);
+      continue;
+    }
+
+    const existingValue = stringValue(existing?.[field.name]);
+
+    if (existingValue) {
+      effectivePayload[field.name] = existingValue;
+      continue;
+    }
+
+    const sourceField = field.sourceField ?? config.titleField;
+    effectivePayload[field.name] = slugify(effectivePayload[sourceField] ?? existing?.[sourceField], config.key);
+  }
+
   const values: Record<string, string | number | null> = {};
 
   for (const field of config.fields) {
-    const result = coerceFieldValue(config, field, payload[field.name], existing);
+    const result = coerceFieldValue(config, field, effectivePayload[field.name], existing);
 
     if (!result.ok) {
       return result;
@@ -382,6 +420,41 @@ export function normalizeAdminCrudPayload(
   }
 
   return { ok: true, values };
+}
+
+export async function ensureGeneratedUniqueFields(
+  config: AdminCrudModuleConfig,
+  values: Record<string, string | number | null>,
+  itemId?: number
+): Promise<Record<string, string | number | null>> {
+  const nextValues = { ...values };
+
+  for (const field of config.fields) {
+    if (field.autoGenerate !== "slug" || !(config.uniqueFields ?? []).includes(field.name)) {
+      continue;
+    }
+
+    const baseValue = slugify(nextValues[field.name], config.key);
+    let candidate = baseValue;
+
+    for (let suffix = 2; suffix < 200; suffix += 1) {
+      const rows = await queryRows<{ id: number }>(
+        `SELECT id FROM ${quoteIdentifier(config.table)} WHERE ${quoteIdentifier(field.name)} = ? ${
+          itemId ? "AND id <> ?" : ""
+        } LIMIT 1`,
+        itemId ? [candidate, itemId] : [candidate]
+      );
+
+      if (!rows?.length) {
+        nextValues[field.name] = candidate;
+        break;
+      }
+
+      candidate = `${baseValue}-${suffix}`;
+    }
+  }
+
+  return nextValues;
 }
 
 export async function findAdminCrudDuplicate(

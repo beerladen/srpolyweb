@@ -22,6 +22,7 @@ type HomeNewsShowcaseProps = {
 };
 
 const homepageCategorySlugs = ["general", "activities", "procurement-news", "announcements-news"];
+const maxHomepageCategoryTabs = 8;
 
 function displayDate(value?: string | Date): string {
   if (!value) {
@@ -58,7 +59,9 @@ export function HomeNewsShowcase({
     const preferredCategories = homepageCategorySlugs
       .map((slug) => categories.find((category) => category.slug === slug))
       .filter((category): category is NewsCategory => Boolean(category));
-    const visibleCategories = preferredCategories.length ? preferredCategories : categories.slice(0, 4);
+    const preferredIds = new Set(preferredCategories.map((category) => category.id));
+    const extraCategories = categories.filter((category) => !preferredIds.has(category.id));
+    const visibleCategories = [...preferredCategories, ...extraCategories].slice(0, maxHomepageCategoryTabs);
 
     return [{ id: 0, name: "ทั้งหมด", slug: "all" }, ...visibleCategories];
   }, [categories]);
@@ -106,6 +109,7 @@ export function HomeNewsShowcase({
                   moduleKey={categoryConfig.key}
                   moduleLabel={categoryConfig.label}
                   fields={categoryConfig.fields}
+                  afterCreateHref="/"
                   label="เพิ่มหมวด"
                 />
               ) : null}
@@ -116,6 +120,7 @@ export function HomeNewsShowcase({
                   moduleKey={newsConfig.key}
                   moduleLabel={newsConfig.label}
                   fields={newsConfig.fields}
+                  afterCreateHref="/"
                   label="เพิ่มข่าว"
                 />
               ) : null}

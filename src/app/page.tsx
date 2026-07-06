@@ -177,76 +177,80 @@ export default async function Home() {
 
   return (
     <SiteShell active="home" settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
-      <section className="border-b border-blue-100 bg-white">
-        <div
-          data-home-hero
-          className="relative isolate min-h-[420px] overflow-hidden bg-slate-900 md:min-h-[500px]"
-        >
-          <div className="absolute inset-0 bg-cover bg-center" style={backgroundImageStyle(heroImage)} />
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-full bg-gradient-to-r from-blue-950/88 via-blue-950/48 to-transparent md:w-[78%] lg:w-[70%]" />
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white via-white/70 to-transparent" />
-          <div className="relative mx-auto flex min-h-[420px] max-w-7xl flex-col justify-center px-4 py-10 md:min-h-[500px] md:px-6">
-            <div className="max-w-3xl text-white">
-              <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-normal md:text-5xl lg:text-6xl">
-                {heroTitle}
-              </h1>
-              <p className="mt-4 text-lg font-bold leading-8 text-sky-100 md:text-2xl">
-                {heroSubtitle}
-              </p>
-              <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-white/90 md:text-base">
-                {heroBody}
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-3">
-                <Button asChild className="bg-blue-600 shadow-lg shadow-blue-950/30 hover:bg-blue-700">
-                  <Link
-                    href={heroPrimaryHref}
-                    target={isExternalLink(heroPrimaryHref) ? "_blank" : undefined}
-                    rel={isExternalLink(heroPrimaryHref) ? "noreferrer" : undefined}
-                  >
-                    <GraduationCap data-icon="inline-start" />
-                    {heroPrimaryLabel}
-                  </Link>
-                </Button>
-                <Button asChild variant="outline" className="border-white/70 bg-white/92 text-blue-950 shadow-lg shadow-blue-950/20 hover:bg-white">
-                  <Link
-                    href={heroSecondaryHref}
-                    target={isExternalLink(heroSecondaryHref) ? "_blank" : undefined}
-                    rel={isExternalLink(heroSecondaryHref) ? "noreferrer" : undefined}
-                  >
-                    {heroSecondaryLabel}
-                    <ArrowRight data-icon="inline-end" />
-                  </Link>
-                </Button>
-              </div>
-              <div className="mt-5">
-                {siteBlockConfig && heroBlock ? (
-                  <AdminCrudTools
-                    user={adminUser}
-                    permission={siteBlockConfig.permission}
-                    moduleKey={siteBlockConfig.key}
-                    moduleLabel={siteBlockConfig.label}
-                    fields={siteBlockConfig.fields}
-                    row={heroBlock}
-                    label="แก้ไข Hero"
-                    adminHref="/admin/modules/site_blocks"
-                    afterDeleteHref="/admin/modules/site_blocks"
-                    className="border-white/70 bg-white/90 text-blue-950 shadow-lg shadow-blue-950/20 hover:bg-white"
-                  />
-                ) : (
-                  <AdminInlineTools
-                    user={adminUser}
-                    permission="site_blocks"
-                    module="site_blocks"
-                    label="แก้ไข Hero"
-                    showCreate={false}
-                  />
-                )}
+      <section className="border-b border-border bg-background py-4 md:py-6">
+        <div className="mx-auto max-w-7xl px-4 md:px-6">
+          <div
+            data-home-hero
+            className="relative isolate min-h-[380px] overflow-hidden rounded-lg border border-border bg-card shadow-xl shadow-blue-950/10 md:min-h-[430px]"
+          >
+            <div
+              className="absolute inset-0 bg-cover bg-[position:center_right]"
+              style={backgroundImageStyle(heroImage)}
+            />
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-full bg-gradient-to-r from-background via-background/95 to-background/40 md:w-[78%] md:to-transparent lg:w-[64%]" />
+            <div className="relative flex min-h-[380px] flex-col justify-center px-5 py-8 md:min-h-[430px] md:px-10 lg:px-12">
+              <div className="max-w-3xl">
+                <h1 className="max-w-3xl text-4xl font-extrabold leading-tight tracking-normal text-primary md:text-5xl lg:text-6xl">
+                  {heroTitle}
+                </h1>
+                <p className="mt-4 text-lg font-bold leading-8 text-foreground md:text-2xl">
+                  {heroSubtitle}
+                </p>
+                <p className="mt-4 max-w-xl text-sm font-medium leading-7 text-muted-foreground md:text-base">
+                  {heroBody}
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-3">
+                  <Button asChild className="shadow-lg shadow-primary/20">
+                    <Link
+                      href={heroPrimaryHref}
+                      target={isExternalLink(heroPrimaryHref) ? "_blank" : undefined}
+                      rel={isExternalLink(heroPrimaryHref) ? "noreferrer" : undefined}
+                    >
+                      <GraduationCap data-icon="inline-start" />
+                      {heroPrimaryLabel}
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" className="bg-background/90 shadow-lg shadow-blue-950/10 backdrop-blur hover:bg-background">
+                    <Link
+                      href={heroSecondaryHref}
+                      target={isExternalLink(heroSecondaryHref) ? "_blank" : undefined}
+                      rel={isExternalLink(heroSecondaryHref) ? "noreferrer" : undefined}
+                    >
+                      {heroSecondaryLabel}
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                </div>
+                <div className="mt-5">
+                  {siteBlockConfig && heroBlock ? (
+                    <AdminCrudTools
+                      user={adminUser}
+                      permission={siteBlockConfig.permission}
+                      moduleKey={siteBlockConfig.key}
+                      moduleLabel={siteBlockConfig.label}
+                      fields={siteBlockConfig.fields}
+                      row={heroBlock}
+                      label="แก้ไข Hero"
+                      adminHref="/admin/modules/site_blocks"
+                      afterDeleteHref="/admin/modules/site_blocks"
+                      className="border-border bg-background/90 text-foreground shadow-lg shadow-blue-950/10 backdrop-blur hover:bg-background"
+                    />
+                  ) : (
+                    <AdminInlineTools
+                      user={adminUser}
+                      permission="site_blocks"
+                      module="site_blocks"
+                      label="แก้ไข Hero"
+                      showCreate={false}
+                    />
+                  )}
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="relative z-10 mx-auto -mt-12 max-w-7xl px-4 pb-6 md:px-6">
+        <div className="relative z-10 mx-auto -mt-8 max-w-7xl px-4 pb-6 md:px-6">
           <div className="grid overflow-hidden rounded-lg border border-blue-100 bg-white shadow-xl shadow-blue-950/10 md:grid-cols-4">
             {accessItems.map((item) => {
               const Icon = item.icon;
@@ -481,16 +485,16 @@ export default async function Home() {
             })}
           </div>
 
-          <div className="mt-4 rounded-lg border border-blue-100 bg-gradient-to-r from-blue-700 via-blue-600 to-sky-500 p-4 text-white shadow-sm shadow-blue-950/10">
+          <div className="mt-4 rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm shadow-blue-950/5">
             <div className="grid gap-4 lg:grid-cols-[280px_1fr_auto] lg:items-center">
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="flex size-10 items-center justify-center rounded-md bg-white/15">
+                  <span className="flex size-10 items-center justify-center rounded-md bg-primary text-primary-foreground shadow-xs">
                     <Download className="size-5" />
                   </span>
                   <h2 className="text-xl font-bold tracking-normal">เอกสาร/แบบฟอร์มยอดนิยม</h2>
                 </div>
-                <p className="mt-2 text-sm leading-6 text-blue-50">
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   คำร้องและไฟล์บริการที่ผู้เรียนดาวน์โหลดบ่อย
                 </p>
               </div>
@@ -499,22 +503,22 @@ export default async function Home() {
                   <Link
                     key={document.id}
                     href={`/documents/${document.id}`}
-                    className="group flex items-center gap-3 rounded-md bg-white/12 px-3 py-2 transition-colors hover:bg-white/20"
+                    className="group flex items-center gap-3 rounded-md border border-border bg-muted/35 px-3 py-2 transition-colors hover:bg-accent/70"
                   >
-                    <span className="flex size-7 shrink-0 items-center justify-center rounded bg-white text-xs font-extrabold text-blue-700">
+                    <span className="flex size-7 shrink-0 items-center justify-center rounded border border-border bg-background text-xs font-extrabold text-primary">
                       {index + 1}
                     </span>
                     <span className="min-w-0 flex-1">
-                      <strong className="block truncate text-sm">{document.title}</strong>
-                      <span className="block truncate text-xs text-blue-100">
+                      <strong className="block truncate text-sm text-foreground group-hover:text-primary">{document.title}</strong>
+                      <span className="block truncate text-xs text-muted-foreground">
                         {document.department} · {document.downloadCount.toLocaleString("th-TH")} ดาวน์โหลด
                       </span>
                     </span>
-                    <ArrowRight className="size-4 shrink-0 transition-transform group-hover:translate-x-1" />
+                    <ArrowRight className="size-4 shrink-0 text-primary transition-transform group-hover:translate-x-1" />
                   </Link>
                 ))}
               </div>
-              <Button asChild className="bg-white text-blue-800 hover:bg-blue-50">
+              <Button asChild>
                 <Link href="/documents">
                   ดูเอกสารทั้งหมด
                   <ArrowRight data-icon="inline-end" />

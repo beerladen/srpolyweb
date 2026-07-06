@@ -42,6 +42,25 @@ export function normalizeLegacyUrl(path?: string | null): string {
     }
   }
 
+  if (cleanPath === "procurement.php" && query) {
+    const params = new URLSearchParams(query);
+    const type = params.get("type") ?? "";
+    const decodedQuery = (() => {
+      try {
+        return decodeURIComponent(query);
+      } catch {
+        return query;
+      }
+    })();
+
+    if (type === "รายงานงบทดลอง" || decodedQuery.includes("รายงานงบทดลอง")) {
+      const year = params.get("year");
+      const yearSuffix = year ? `?year=${encodeURIComponent(year)}` : "";
+
+      return `/trial-balance${yearSuffix}${hashSuffix}`;
+    }
+  }
+
   const mapped = legacyRouteMap[cleanPath] ?? `/${cleanPath.replace(/\.php$/, "")}`;
   const querySuffix = query ? `?${query}` : "";
 

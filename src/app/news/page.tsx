@@ -30,6 +30,7 @@ export default async function NewsPage() {
                   moduleKey={categoryConfig.key}
                   moduleLabel={categoryConfig.label}
                   fields={categoryConfig.fields}
+                  afterCreateHref="/news"
                   label="เพิ่มหมวดข่าว"
                 />
               ) : null}
@@ -40,6 +41,7 @@ export default async function NewsPage() {
                   moduleKey={crudConfig.key}
                   moduleLabel={crudConfig.label}
                   fields={crudConfig.fields}
+                  afterCreateHref="/news"
                   label="เพิ่มข่าว"
                 />
               ) : null}

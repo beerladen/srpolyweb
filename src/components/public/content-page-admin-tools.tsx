@@ -67,15 +67,6 @@ const contentTypeOptions = [
   { value: "faq", label: "คำถามพบบ่อย" },
 ];
 
-function makeInitialSlug(title: string): string {
-  return title
-    .toLowerCase()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9ก-๙]+/gi, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 150);
-}
-
 function redirectToSignIn() {
   window.location.assign(withBasePath("/signin"));
 }
@@ -105,7 +96,6 @@ export function ContentPageAdminTools({
   const fieldId = useId();
   const isEditing = Boolean(page);
   const [open, setOpen] = useState(false);
-  const [slug, setSlug] = useState(page?.slug ?? "");
   const [title, setTitle] = useState(page?.title ?? "");
   const [summary, setSummary] = useState(page?.summary ?? "");
   const [body, setBody] = useState(page?.body ?? "");
@@ -126,19 +116,11 @@ export function ContentPageAdminTools({
     return null;
   }
 
-  function handleTitleChange(value: string) {
-    setTitle(value);
-    if (!isEditing && !slug.trim()) {
-      setSlug(makeInitialSlug(value));
-    }
-  }
-
   async function handleSave() {
     setIsSaving(true);
     setMessage(null);
 
     const payload = {
-      slug,
       title,
       summary,
       body,
@@ -170,10 +152,10 @@ export function ContentPageAdminTools({
     }
 
     setMessage(isEditing ? "อัปเดตแล้ว" : "สร้างหน้าใหม่แล้ว");
+    setOpen(false);
     router.refresh();
 
     if (!isEditing && result?.page) {
-      setSlug(result.page.slug);
       setTitle(result.page.title);
       setSummary(result.page.summary);
       setBody(result.page.body);
@@ -276,22 +258,13 @@ export function ContentPageAdminTools({
         </DialogHeader>
 
         <FieldGroup>
-          <div className="grid gap-4 md:grid-cols-[1.25fr_0.75fr]">
+          <div className="grid gap-4">
             <Field>
               <FieldLabel htmlFor={`${fieldId}-title`}>หัวข้อ</FieldLabel>
               <Input
                 id={`${fieldId}-title`}
                 value={title}
-                onChange={(event) => handleTitleChange(event.target.value)}
-              />
-            </Field>
-            <Field>
-              <FieldLabel htmlFor={`${fieldId}-slug`}>URL slug</FieldLabel>
-              <Input
-                id={`${fieldId}-slug`}
-                value={slug}
-                onChange={(event) => setSlug(event.target.value)}
-                placeholder="my-page"
+                onChange={(event) => setTitle(event.target.value)}
               />
             </Field>
           </div>
@@ -481,7 +454,7 @@ export function ContentPageAdminTools({
           <div className="flex flex-wrap gap-2">
             {isEditing ? (
               <Button asChild variant="outline">
-                <Link href={`/content/${slug || page?.slug}`}>
+                <Link href={`/content/${page?.slug}`}>
                   <Eye data-icon="inline-start" />
                   เปิดดูหน้า
                 </Link>

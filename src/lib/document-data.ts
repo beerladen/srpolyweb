@@ -1,5 +1,6 @@
 import { executeSqlResult, queryRows } from "@/lib/db";
 import { publicAssetPath } from "@/lib/legacy-paths";
+import { fileNameFromPath, inferFileType, parseMediaItems } from "@/lib/media-fields";
 
 export type DownloadCategory = {
   id: number;
@@ -22,6 +23,8 @@ export type DownloadDocument = {
   responsiblePerson?: string;
   filePath?: string;
   fileUrl?: string;
+  detailUrl?: string;
+  downloadUrl?: string;
   fileType: string;
   fileSizeKb?: number;
   serviceTarget?: string;
@@ -86,6 +89,36 @@ type RawDownloadCategory = {
   description: string | null;
   document_count: number | null;
 };
+
+type RawNewsAttachment = {
+  id: number;
+  title: string;
+  slug: string;
+  summary: string | null;
+  attachment_files: string | null;
+  published_at: RawDate;
+  updated_at: RawDate;
+  category_name: string | null;
+  category_slug: string | null;
+};
+
+let newsAttachmentColumnsAvailable: boolean | null = null;
+
+async function hasNewsAttachmentColumns(): Promise<boolean> {
+  if (newsAttachmentColumnsAvailable === true) {
+    return true;
+  }
+
+  const rows = await queryRows<{ Field: string }>("SHOW COLUMNS FROM news");
+  const columns = new Set(rows?.map((row) => row.Field) ?? []);
+  const hasColumns = columns.has("attachment_files") && columns.has("sync_to_downloads");
+
+  if (hasColumns) {
+    newsAttachmentColumnsAvailable = true;
+  }
+
+  return hasColumns;
+}
 
 const fallbackDocuments: DownloadDocument[] = [
   {
@@ -167,6 +200,44 @@ function mapDownloadDocument(row: RawDownloadDocument): DownloadDocument {
   };
 }
 
+function mapNewsAttachmentDocuments(rows: RawNewsAttachment[]): DownloadDocument[] {
+  return rows.flatMap((row) => {
+    const attachments = parseMediaItems(row.attachment_files);
+
+    return attachments.map((file, index) => {
+      const filePath = file.path;
+      const fileType = inferFileType(filePath, file.type);
+      const title = file.name && file.name !== filePath ? file.name : fileNameFromPath(filePath);
+
+      return {
+        id: -(Number(row.id) * 1000 + index + 1),
+        title: title || `ไฟล์แนบข่าว: ${row.title}`,
+        description: row.summary ?? `ไฟล์แนบจากข่าว ${row.title}`,
+        content: undefined,
+        categoryName: "ไฟล์แนบข่าวประชาสัมพันธ์",
+        categorySlug: "news-attachments",
+        department: row.category_name ?? "งานประชาสัมพันธ์",
+        responsiblePerson: "งานประชาสัมพันธ์",
+        filePath,
+        fileUrl: publicAssetPath(filePath),
+        detailUrl: `/news/${row.slug}`,
+        downloadUrl: publicAssetPath(filePath),
+        fileType,
+        fileSizeKb: file.sizeKb,
+        serviceTarget: "นักเรียน นักศึกษา ผู้ปกครอง และประชาชน",
+        tags: [row.category_name, "ข่าวประชาสัมพันธ์", row.title].filter(Boolean).join(", "),
+        downloadCount: 0,
+        publicStatus: "published",
+        itaRelated: false,
+        publishedAt: normalizeDate(row.published_at),
+        updatedAt: normalizeDate(row.updated_at),
+        isFeatured: false,
+        sortOrder: 999 + index,
+      } satisfies DownloadDocument;
+    });
+  });
+}
+
 function buildStats(
   documents: DownloadDocument[],
   categories: DownloadCategory[],
@@ -183,21 +254,48 @@ function buildStats(
 
 export async function getDownloadDocuments(limit = 200): Promise<DownloadDocument[]> {
   const safeLimit = Math.max(1, Math.min(500, Math.floor(Number.isFinite(limit) ? limit : 200)));
-  const rows = await queryRows<RawDownloadDocument>(
-    `SELECT d.id, d.title, d.description, d.content, d.category_id,
-            c.name AS category_name, c.slug AS category_slug,
-            d.fiscal_year, d.department, d.responsible_person,
-            d.file_path, d.file_type, d.file_size, d.service_target, d.tags,
-            d.download_count, d.public_status, d.ita_related, d.ita_code,
-            d.published_at, d.updated_at, d.is_featured, d.sort_order
-     FROM documents d
-     LEFT JOIN categories c ON c.id = d.category_id
-     WHERE d.public_status = 'published'
-     ORDER BY d.is_featured DESC, d.sort_order ASC, d.download_count DESC, COALESCE(d.published_at, d.updated_at) DESC, d.id DESC
-     LIMIT ${safeLimit}`
+  const [rows, newsAttachmentDocuments] = await Promise.all([
+    queryRows<RawDownloadDocument>(
+      `SELECT d.id, d.title, d.description, d.content, d.category_id,
+              c.name AS category_name, c.slug AS category_slug,
+              d.fiscal_year, d.department, d.responsible_person,
+              d.file_path, d.file_type, d.file_size, d.service_target, d.tags,
+              d.download_count, d.public_status, d.ita_related, d.ita_code,
+              d.published_at, d.updated_at, d.is_featured, d.sort_order
+       FROM documents d
+       LEFT JOIN categories c ON c.id = d.category_id
+       WHERE d.public_status = 'published'
+       ORDER BY d.is_featured DESC, d.sort_order ASC, d.download_count DESC, COALESCE(d.published_at, d.updated_at) DESC, d.id DESC
+       LIMIT ${safeLimit}`
+    ),
+    getNewsAttachmentDownloadDocuments(),
+  ]);
+  const documents = rows?.length ? rows.map(mapDownloadDocument) : fallbackDocuments;
+
+  return [...documents, ...newsAttachmentDocuments]
+    .sort((a, b) => Number(b.isFeatured) - Number(a.isFeatured) || a.sortOrder - b.sortOrder || b.downloadCount - a.downloadCount)
+    .slice(0, safeLimit);
+}
+
+export async function getNewsAttachmentDownloadDocuments(): Promise<DownloadDocument[]> {
+  if (!(await hasNewsAttachmentColumns())) {
+    return [];
+  }
+
+  const rows = await queryRows<RawNewsAttachment>(
+    `SELECT n.id, n.title, n.slug, n.summary, n.attachment_files, n.published_at, n.updated_at,
+            c.name AS category_name, c.slug AS category_slug
+     FROM news n
+     LEFT JOIN categories c ON c.id = n.category_id
+     WHERE n.status = 'published'
+       AND n.sync_to_downloads = 1
+       AND n.attachment_files IS NOT NULL
+       AND n.attachment_files <> ''
+     ORDER BY COALESCE(n.published_at, n.updated_at) DESC, n.id DESC
+     LIMIT 100`
   );
 
-  return rows?.length ? rows.map(mapDownloadDocument) : fallbackDocuments;
+  return rows?.length ? mapNewsAttachmentDocuments(rows) : [];
 }
 
 export async function getDownloadDocument(id: number): Promise<DownloadDocument | null> {
@@ -255,6 +353,26 @@ export async function getDownloadCenterData(): Promise<DownloadCenterData> {
     getDownloadCategories(),
     getMonthDownloadCount(),
   ]);
+  const categoriesBySlug = new Map<string, DownloadCategory>();
+
+  categories.forEach((category) => {
+    categoriesBySlug.set(category.slug, { ...category, count: 0 });
+  });
+
+  documents.forEach((document) => {
+    const slug = document.categorySlug ?? "general-documents";
+    const current = categoriesBySlug.get(slug);
+
+    categoriesBySlug.set(slug, {
+      id: current?.id ?? -(categoriesBySlug.size + 1),
+      name: current?.name ?? document.categoryName,
+      slug,
+      description: current?.description,
+      count: (current?.count ?? 0) + 1,
+    });
+  });
+
+  const mergedCategories = Array.from(categoriesBySlug.values()).filter((category) => category.count > 0);
   const departments = Array.from(new Set(documents.map((item) => item.department).filter(Boolean))).sort((a, b) =>
     a.localeCompare(b, "th")
   );
@@ -265,11 +383,11 @@ export async function getDownloadCenterData(): Promise<DownloadCenterData> {
 
   return {
     documents,
-    categories,
+    categories: mergedCategories,
     departments,
     fileTypes,
     popular,
-    stats: buildStats(documents, categories, monthDownloads),
+    stats: buildStats(documents, mergedCategories, monthDownloads),
   };
 }
 

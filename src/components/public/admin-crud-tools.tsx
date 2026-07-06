@@ -28,6 +28,7 @@ import { Textarea } from "@/components/ui/textarea";
 import type { AdminCrudField, AdminCrudRow, AdminCrudValue } from "@/lib/admin-crud-config";
 import type { AdminUser } from "@/lib/admin-auth";
 import { apiPath, withBasePath } from "@/lib/base-path";
+import { fileNameFromPath, inferFileType, parseMediaItems, serializeMediaItems, type MediaItem } from "@/lib/media-fields";
 import { canAccess } from "@/lib/permissions";
 
 type ButtonVariant = "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
@@ -54,6 +55,14 @@ type SavedItemResponse = {
   item?: AdminCrudRow;
 };
 
+type UploadResponse = {
+  message?: string;
+  path?: string;
+  name?: string;
+  type?: string;
+  sizeKb?: number;
+};
+
 function initialValue(field: AdminCrudField): AdminCrudValue {
   if (field.defaultValue !== undefined) {
     return field.defaultValue;
@@ -74,6 +83,22 @@ function makeInitialValues(fields: AdminCrudField[], row?: AdminCrudRow): Record
 
 function textInputValue(value: AdminCrudValue): string {
   return value === null || value === undefined ? "" : String(value);
+}
+
+function isImageUploadField(field: AdminCrudField): boolean {
+  return field.type === "image" || field.type === "gallery";
+}
+
+function imageUploadGuidance(field: AdminCrudField): string {
+  if (field.uploadHint) {
+    return field.uploadHint;
+  }
+
+  if (field.type === "gallery") {
+    return "แนะนำไฟล์ JPG, PNG หรือ WebP กว้างอย่างน้อย 1200 px เพื่อให้กริดภาพย่อคมชัดและขนาดภาพดูสม่ำเสมอ";
+  }
+
+  return "แนะนำไฟล์ JPG, PNG หรือ WebP กว้างอย่างน้อย 1600 px และจัดจุดสำคัญของภาพให้อยู่กลางภาพหรือด้านที่ต้องการแสดง";
 }
 
 function redirectToSignIn() {
@@ -100,6 +125,7 @@ export function AdminCrudTools({
   const isEditing = Boolean(row);
   const triggerLabel = label ?? (isEditing ? "จัดการ" : "เพิ่มรายการ");
   const defaultValues = useMemo(() => makeInitialValues(fields, row), [fields, row]);
+  const visibleFields = useMemo(() => fields.filter((field) => !field.hidden), [fields]);
   const [open, setOpen] = useState(false);
   const [values, setValues] = useState<Record<string, AdminCrudValue>>(defaultValues);
   const [isSaving, setIsSaving] = useState(false);
@@ -154,6 +180,7 @@ export function AdminCrudTools({
     }
 
     setMessage(isEditing ? "อัปเดตแล้ว" : "สร้างรายการแล้ว");
+    setOpen(false);
     router.refresh();
 
     if (!isEditing) {
@@ -220,17 +247,67 @@ export function AdminCrudTools({
       return;
     }
 
-    const result = (await response.json().catch(() => null)) as { message?: string; path?: string } | null;
+    const result = (await response.json().catch(() => null)) as UploadResponse | null;
 
     setUploadingField(null);
 
     if (!response.ok || !result?.path) {
-      setMessage(result?.message ?? (field.type === "image" ? "ยังอัปโหลดภาพไม่ได้" : "ยังอัปโหลดไฟล์ไม่ได้"));
+      setMessage(result?.message ?? (isImageUploadField(field) ? "ยังอัปโหลดภาพไม่ได้" : "ยังอัปโหลดไฟล์ไม่ได้"));
       return;
     }
 
     setFieldValue(field.name, result.path);
-    setMessage(field.type === "image" ? "อัปโหลดภาพแล้ว กดอัปเดตเพื่อบันทึกการเปลี่ยนแปลง" : "อัปโหลดไฟล์แล้ว กดอัปเดตเพื่อบันทึกการเปลี่ยนแปลง");
+    setMessage(isImageUploadField(field) ? "อัปโหลดภาพแล้ว กดอัปเดตเพื่อบันทึกการเปลี่ยนแปลง" : "อัปโหลดไฟล์แล้ว กดอัปเดตเพื่อบันทึกการเปลี่ยนแปลง");
+  }
+
+  async function handleMultipleFileUpload(field: AdminCrudField, files?: FileList | null) {
+    const selectedFiles = Array.from(files ?? []);
+
+    if (!selectedFiles.length) {
+      return;
+    }
+
+    setUploadingField(field.name);
+    setMessage(null);
+
+    const uploadedItems: MediaItem[] = [];
+
+    for (const file of selectedFiles) {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("moduleKey", moduleKey);
+      formData.append("fieldName", field.name);
+
+      const response = await fetch(apiPath("/api/admin/uploads"), {
+        method: "POST",
+        body: formData,
+      });
+
+      if (response.status === 401) {
+        redirectToSignIn();
+        return;
+      }
+
+      const result = (await response.json().catch(() => null)) as UploadResponse | null;
+
+      if (!response.ok || !result?.path) {
+        setUploadingField(null);
+        setMessage(result?.message ?? (isImageUploadField(field) ? "บางภาพยังอัปโหลดไม่ได้" : "บางไฟล์ยังอัปโหลดไม่ได้"));
+        return;
+      }
+
+      uploadedItems.push({
+        path: result.path,
+        name: result.name || file.name || fileNameFromPath(result.path),
+        type: inferFileType(result.path, result.type),
+        sizeKb: result.sizeKb,
+      });
+    }
+
+    const currentItems = parseMediaItems(textInputValue(values[field.name]));
+    setUploadingField(null);
+    setFieldValue(field.name, serializeMediaItems([...currentItems, ...uploadedItems]));
+    setMessage(isImageUploadField(field) ? "อัปโหลดภาพแล้ว กดบันทึกเพื่อเผยแพร่การเปลี่ยนแปลง" : "อัปโหลดไฟล์แล้ว กดบันทึกเพื่อเผยแพร่การเปลี่ยนแปลง");
   }
 
   function publicUploadPath(value: AdminCrudValue): string | null {
@@ -245,6 +322,11 @@ export function AdminCrudTools({
     }
 
     return withBasePath(`/${rawValue.replace(/^\.?\//, "")}`);
+  }
+
+  function removeMediaItem(field: AdminCrudField, indexToRemove: number) {
+    const nextItems = parseMediaItems(textInputValue(values[field.name])).filter((_, index) => index !== indexToRemove);
+    setFieldValue(field.name, serializeMediaItems(nextItems));
   }
 
   function renderField(field: AdminCrudField) {
@@ -294,6 +376,10 @@ export function AdminCrudTools({
       return (
         <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
           <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <span className="font-semibold text-foreground">ขนาดภาพที่แนะนำ: </span>
+            {imageUploadGuidance(field)}
+          </div>
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
             <Input
               id={id}
@@ -369,6 +455,143 @@ export function AdminCrudTools({
       );
     }
 
+    if (field.type === "gallery") {
+      const images = parseMediaItems(textInputValue(value));
+
+      return (
+        <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
+          <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
+            <span className="font-semibold text-foreground">ขนาดภาพที่แนะนำ: </span>
+            {imageUploadGuidance(field)}
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border bg-primary px-3 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">
+              <ImageUp className="size-4" />
+              {uploadingField === field.name ? "กำลังอัปโหลด" : "อัปโหลดหลายภาพ"}
+              <input
+                id={id}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                multiple
+                className="sr-only"
+                disabled={uploadingField === field.name}
+                onChange={(event) => {
+                  void handleMultipleFileUpload(field, event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <span className="text-xs text-muted-foreground">{images.length ? `${images.length} ภาพ` : "ยังไม่มีภาพประกอบเพิ่มเติม"}</span>
+          </div>
+          {images.length ? (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {images.map((image, index) => {
+                const imagePath = publicUploadPath(image.path);
+
+                return (
+                  <div key={`${image.path}-${index}`} className="overflow-hidden rounded-md border bg-white">
+                    <div
+                      className="aspect-[4/3] bg-muted bg-cover bg-center"
+                      style={imagePath ? { backgroundImage: `url("${imagePath}")` } : undefined}
+                      aria-label={image.name ?? field.label}
+                    />
+                    <div className="flex items-center justify-between gap-2 px-3 py-2">
+                      <span className="min-w-0 truncate text-xs text-muted-foreground">{image.name ?? fileNameFromPath(image.path)}</span>
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeMediaItem(field, index)}>
+                        <Trash2 className="size-4" />
+                        ลบ
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          <FieldDescription>{field.description ?? "อัปโหลดรูปภาพได้หลายภาพ แล้วกดบันทึกเพื่อเผยแพร่การเปลี่ยนแปลง"}</FieldDescription>
+        </Field>
+      );
+    }
+
+    if (field.type === "files") {
+      const files = parseMediaItems(textInputValue(value));
+
+      return (
+        <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
+          <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-md border bg-primary px-3 text-sm font-medium text-primary-foreground shadow-xs transition-colors hover:bg-primary/90">
+              <FileUp className="size-4" />
+              {uploadingField === field.name ? "กำลังอัปโหลด" : "อัปโหลดหลายไฟล์"}
+              <input
+                id={id}
+                type="file"
+                accept="application/pdf,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.zip,.txt,.csv,.jpg,.jpeg,.png,.webp,.gif"
+                multiple
+                className="sr-only"
+                disabled={uploadingField === field.name}
+                onChange={(event) => {
+                  void handleMultipleFileUpload(field, event.target.files);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+            <span className="text-xs text-muted-foreground">{files.length ? `${files.length} ไฟล์` : "ยังไม่มีไฟล์แนบ"}</span>
+          </div>
+          {files.length ? (
+            <div className="divide-y rounded-md border bg-white">
+              {files.map((file, index) => {
+                const filePath = publicUploadPath(file.path);
+
+                return (
+                  <div key={`${file.path}-${index}`} className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{file.name ?? fileNameFromPath(file.path)}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {inferFileType(file.path, file.type)}
+                        {file.sizeKb ? ` - ${file.sizeKb.toLocaleString("th-TH")} KB` : ""}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {filePath ? (
+                        <Button asChild variant="outline" size="sm">
+                          <Link href={filePath} target="_blank" rel="noreferrer">
+                            <Eye data-icon="inline-start" />
+                            เปิด
+                          </Link>
+                        </Button>
+                      ) : null}
+                      <Button type="button" variant="ghost" size="sm" onClick={() => removeMediaItem(field, index)}>
+                        <Trash2 className="size-4" />
+                        ลบ
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
+          <FieldDescription>{field.description ?? "อัปโหลดไฟล์แนบได้หลายไฟล์ แล้วกดบันทึกเพื่อเผยแพร่การเปลี่ยนแปลง"}</FieldDescription>
+        </Field>
+      );
+    }
+
+    if (field.type === "links") {
+      return (
+        <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
+          <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          <Textarea
+            id={id}
+            className="min-h-24"
+            value={textInputValue(value)}
+            placeholder={field.placeholder ?? "ชื่อเว็บไซต์ | https://example.com"}
+            onChange={(event) => setFieldValue(field.name, event.target.value)}
+          />
+          <FieldDescription>{field.description ?? "ใส่ 1 รายการต่อ 1 บรรทัด เช่น ชื่อเว็บไซต์ | https://example.com"}</FieldDescription>
+        </Field>
+      );
+    }
+
     if (field.type === "switch") {
       return (
         <Field key={field.name} orientation="horizontal" className="rounded-md border p-3">
@@ -421,7 +644,7 @@ export function AdminCrudTools({
         </DialogHeader>
 
         <FieldGroup>
-          <div className="grid gap-4 md:grid-cols-2">{fields.map(renderField)}</div>
+          <div className="grid gap-4 md:grid-cols-2">{visibleFields.map(renderField)}</div>
         </FieldGroup>
 
         {isEditing ? (

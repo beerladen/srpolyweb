@@ -33,6 +33,23 @@ type DownloadCenterProps = DownloadCenterData & {
   crudConfig?: AdminCrudModuleConfig | null;
   crudRows?: AdminCrudRow[] | null;
   categoryConfig?: AdminCrudModuleConfig | null;
+  initialQuery?: string;
+  initialCategory?: string;
+  initialDepartment?: string;
+  initialFileType?: string;
+  copy?: Partial<{
+    eyebrow: string;
+    title: string;
+    description: string;
+    searchPlaceholder: string;
+    addCategoryLabel: string;
+    addDocumentLabel: string;
+    categoryAllLabel: string;
+    departmentAllLabel: string;
+    fileTypeAllLabel: string;
+    emptyMessage: string;
+  }>;
+  afterCreateHref?: string;
 };
 
 const allValue = "all";
@@ -135,16 +152,21 @@ function DocumentRow({
   adminUser?: AdminUser | null;
 }) {
   const Icon = fileTypeIcons[document.fileType] ?? FileText;
+  const detailHref = document.detailUrl ?? `/documents/${document.id}`;
+  const downloadHref = document.downloadUrl ?? `/api/documents/${document.id}/download`;
 
   return (
-    <div className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,0.75fr)_100px_120px_220px] lg:items-center">
+    <div
+      data-download-row
+      className="grid gap-4 px-4 py-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,0.75fr)_100px_120px_220px] lg:items-center"
+    >
       <div className="min-w-0">
         <div className="flex min-w-0 items-start gap-3">
           <span className={cn("mt-0.5 flex size-10 shrink-0 items-center justify-center rounded-md border", fileTypeTone(document.fileType))}>
             <Icon className="size-5" />
           </span>
           <div className="min-w-0">
-            <Link href={`/documents/${document.id}`} className="block truncate font-bold leading-6 text-slate-950 hover:text-blue-700">
+            <Link href={detailHref} className="block truncate font-bold leading-6 text-slate-950 hover:text-blue-700">
               {document.title}
             </Link>
             <p className="mt-1 line-clamp-1 text-sm leading-6 text-slate-600">{document.description}</p>
@@ -195,13 +217,13 @@ function DocumentRow({
             />
           ) : null}
           <Button asChild variant="outline" size="sm">
-            <Link href={`/documents/${document.id}`}>
+            <Link href={detailHref}>
               เปิด
               <ArrowRight data-icon="inline-end" />
             </Link>
           </Button>
           <Button asChild size="sm">
-            <a href={withBasePath(`/api/documents/${document.id}/download`)} target="_blank" rel="noreferrer">
+            <a href={withBasePath(downloadHref)} target="_blank" rel="noreferrer">
               <Download data-icon="inline-start" />
               ดาวน์โหลด
             </a>
@@ -221,11 +243,37 @@ export function DownloadCenter({
   crudConfig,
   crudRows,
   categoryConfig,
+  initialQuery = "",
+  initialCategory = allValue,
+  initialDepartment = allValue,
+  initialFileType = allValue,
+  copy,
+  afterCreateHref = "/documents",
 }: DownloadCenterProps) {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState(allValue);
-  const [department, setDepartment] = useState(allValue);
-  const [fileType, setFileType] = useState(allValue);
+  const labels = {
+    eyebrow: copy?.eyebrow ?? "ศูนย์เอกสารออนไลน์",
+    title: copy?.title ?? "ค้นหาเอกสารและแบบฟอร์ม",
+    description:
+      copy?.description ??
+      "ค้นหา กรองหมวด ฝ่ายงาน และชนิดไฟล์ได้จากจุดเดียว รายการด้านล่างแสดงแบบย่อเพื่อให้อ่านง่าย",
+    searchPlaceholder: copy?.searchPlaceholder ?? "ค้นหาชื่อเอกสาร คำร้อง ฝ่ายงาน หรือคำค้น",
+    addCategoryLabel: copy?.addCategoryLabel ?? "เพิ่มหมวด",
+    addDocumentLabel: copy?.addDocumentLabel ?? "เพิ่มเอกสาร",
+    categoryAllLabel: copy?.categoryAllLabel ?? "ทุกหมวดเอกสาร",
+    departmentAllLabel: copy?.departmentAllLabel ?? "ทุกฝ่ายงาน",
+    fileTypeAllLabel: copy?.fileTypeAllLabel ?? "ทุกชนิดไฟล์",
+    emptyMessage: copy?.emptyMessage ?? "ไม่พบเอกสารตามเงื่อนไขที่เลือก",
+  };
+  const safeInitialCategory =
+    initialCategory === allValue || categories.some((item) => item.slug === initialCategory) ? initialCategory : allValue;
+  const safeInitialDepartment =
+    initialDepartment === allValue || departments.includes(initialDepartment) ? initialDepartment : allValue;
+  const safeInitialFileType =
+    initialFileType === allValue || fileTypes.includes(initialFileType) ? initialFileType : allValue;
+  const [query, setQuery] = useState(initialQuery);
+  const [category, setCategory] = useState(safeInitialCategory);
+  const [department, setDepartment] = useState(safeInitialDepartment);
+  const [fileType, setFileType] = useState(safeInitialFileType);
   const [pageSize, setPageSize] = useState(defaultPageSize);
   const [currentPage, setCurrentPage] = useState(1);
   const crudRowsById = useMemo(() => new Map((crudRows ?? []).map((row) => [row.id, row])), [crudRows]);
@@ -248,11 +296,9 @@ export function DownloadCenter({
       <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-white via-white to-blue-50/70 p-4 shadow-sm shadow-blue-950/5">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
           <div className="max-w-2xl">
-            <p className="text-sm font-bold text-blue-700">ศูนย์เอกสารออนไลน์</p>
-            <h2 className="mt-1 text-2xl font-extrabold tracking-normal text-slate-950">ค้นหาเอกสารและแบบฟอร์ม</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
-              ค้นหา กรองหมวด ฝ่ายงาน และชนิดไฟล์ได้จากจุดเดียว รายการด้านล่างแสดงแบบย่อเพื่อให้อ่านง่าย
-            </p>
+            <p className="text-sm font-bold text-blue-700">{labels.eyebrow}</p>
+            <h2 className="mt-1 text-2xl font-extrabold tracking-normal text-slate-950">{labels.title}</h2>
+            <p className="mt-2 text-sm leading-6 text-slate-600">{labels.description}</p>
           </div>
           <div className="flex flex-wrap gap-2 xl:justify-end">
             {categoryConfig ? (
@@ -262,10 +308,10 @@ export function DownloadCenter({
                 moduleKey={categoryConfig.key}
                 moduleLabel={categoryConfig.label}
                 fields={categoryConfig.fields}
-                label="เพิ่มหมวด"
+                label={labels.addCategoryLabel}
                 triggerSize="sm"
                 adminHref={`/admin/modules/${categoryConfig.key}`}
-                afterCreateHref="/documents"
+                afterCreateHref={afterCreateHref}
               />
             ) : null}
             {crudConfig ? (
@@ -275,10 +321,10 @@ export function DownloadCenter({
                 moduleKey={crudConfig.key}
                 moduleLabel={crudConfig.label}
                 fields={crudConfig.fields}
-                label="เพิ่มเอกสาร"
+                label={labels.addDocumentLabel}
                 triggerSize="sm"
                 adminHref={`/admin/modules/${crudConfig.key}`}
-                afterCreateHref="/documents"
+                afterCreateHref={afterCreateHref}
               />
             ) : null}
           </div>
@@ -292,7 +338,7 @@ export function DownloadCenter({
                 setQuery(event.target.value);
                 setCurrentPage(1);
               }}
-              placeholder="ค้นหาชื่อเอกสาร คำร้อง ฝ่ายงาน หรือคำค้น"
+              placeholder={labels.searchPlaceholder}
               className="pl-9"
             />
           </div>
@@ -305,7 +351,7 @@ export function DownloadCenter({
               setCurrentPage(1);
             }}
           >
-            <option value={allValue}>ทุกหมวดเอกสาร</option>
+            <option value={allValue}>{labels.categoryAllLabel}</option>
             {categories.map((item) => (
               <option key={item.id} value={item.slug}>
                 {item.name}
@@ -321,7 +367,7 @@ export function DownloadCenter({
               setCurrentPage(1);
             }}
           >
-            <option value={allValue}>ทุกฝ่ายงาน</option>
+            <option value={allValue}>{labels.departmentAllLabel}</option>
             {departments.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -337,7 +383,7 @@ export function DownloadCenter({
               setCurrentPage(1);
             }}
           >
-            <option value={allValue}>ทุกชนิดไฟล์</option>
+            <option value={allValue}>{labels.fileTypeAllLabel}</option>
             {fileTypes.map((item) => (
               <option key={item} value={item}>
                 {item}
@@ -383,7 +429,7 @@ export function DownloadCenter({
                 />
               ))
             ) : (
-              <div className="px-4 py-12 text-center text-sm text-slate-500">ไม่พบเอกสารตามเงื่อนไขที่เลือก</div>
+              <div className="px-4 py-12 text-center text-sm text-slate-500">{labels.emptyMessage}</div>
             )}
           </div>
           <div

@@ -60,7 +60,7 @@ export const permissionDetails: Record<PermissionKey, PermissionMeta> = {
   },
   procurement: {
     label: "จัดการจัดซื้อจัดจ้าง / พัสดุ",
-    description: "ควบคุมประกาศจัดซื้อจัดจ้าง รายงานงบทดลอง และรายการพัสดุ",
+    description: "ควบคุมประกาศจัดซื้อจัดจ้าง แผนจัดซื้อจัดจ้าง ราคากลาง และรายการพัสดุ",
   },
   documents: {
     label: "จัดการดาวน์โหลดเอกสาร",

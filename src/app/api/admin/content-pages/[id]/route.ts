@@ -22,11 +22,14 @@ const allowedStatuses = new Set(["published", "draft", "review", "archived"]);
 function normalizeSlug(value: string, fallback: string): string {
   const source = value.trim() || fallback.trim() || `page-${Date.now()}`;
   const slug = source
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/['"]/g, "")
-    .replace(/[^a-z0-9ก-๙]+/gi, "-")
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 150);
+    .slice(0, 150)
+    .replace(/-+$/g, "");
 
   return slug || `page-${Date.now()}`;
 }

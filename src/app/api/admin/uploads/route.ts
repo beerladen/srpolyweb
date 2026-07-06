@@ -52,6 +52,14 @@ const allowedDocumentExtensions = new Set([
 const maxImageUploadBytes = 5 * 1024 * 1024;
 const maxDocumentUploadBytes = 20 * 1024 * 1024;
 
+function isImageUploadField(fieldType?: string): boolean {
+  return fieldType === "image" || fieldType === "gallery";
+}
+
+function isDocumentUploadField(fieldType?: string): boolean {
+  return fieldType === "file" || fieldType === "files";
+}
+
 function safeUploadFolder(value: unknown, fallback: "images" | "documents"): "images" | "news" | "personnel" | "documents" {
   return value === "news" || value === "personnel" || value === "documents" ? value : fallback;
 }
@@ -83,30 +91,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "ไม่มีสิทธิ์อัปโหลดไฟล์ในเมนูนี้" }, { status: 403 });
   }
 
-  if (!field || (field.type !== "image" && field.type !== "file")) {
+  if (!field || (!isImageUploadField(field.type) && !isDocumentUploadField(field.type))) {
     return NextResponse.json({ message: "ช่องนี้ไม่รองรับการอัปโหลดไฟล์" }, { status: 400 });
   }
 
-  if (field.type === "image" && file.size > maxImageUploadBytes) {
+  const isImageField = isImageUploadField(field.type);
+
+  if (isImageField && file.size > maxImageUploadBytes) {
     return NextResponse.json({ message: "ไฟล์ภาพต้องไม่เกิน 5MB" }, { status: 400 });
   }
 
-  if (field.type === "file" && file.size > maxDocumentUploadBytes) {
+  if (!isImageField && file.size > maxDocumentUploadBytes) {
     return NextResponse.json({ message: "ไฟล์เอกสารต้องไม่เกิน 20MB" }, { status: 400 });
   }
 
-  const extension = field.type === "image"
+  const extension = isImageField
     ? allowedMimeTypes.get(file.type) ?? extensionFromName(file.name, new Set(allowedMimeTypes.values()))
     : allowedDocumentMimeTypes.get(file.type) ?? extensionFromName(file.name, allowedDocumentExtensions);
 
   if (!extension) {
     return NextResponse.json(
-      { message: field.type === "image" ? "รองรับเฉพาะไฟล์ JPG, PNG, WEBP หรือ GIF" : "รองรับไฟล์ PDF, Word, Excel, PowerPoint, ZIP, TXT, CSV และรูปภาพ" },
+      { message: isImageField ? "รองรับเฉพาะไฟล์ JPG, PNG, WEBP หรือ GIF" : "รองรับไฟล์ PDF, Word, Excel, PowerPoint, ZIP, TXT, CSV และรูปภาพ" },
       { status: 400 }
     );
   }
 
-  const folder = safeUploadFolder(field.uploadFolder, field.type === "image" ? "images" : "documents");
+  const folder = safeUploadFolder(field.uploadFolder, isImageField ? "images" : "documents");
   const uploadDir = path.join(process.cwd(), "public", "uploads", folder);
   const filename = `${moduleKey}-${fieldName}-${randomUUID()}.${extension}`;
   const bytes = Buffer.from(await file.arrayBuffer());
@@ -117,5 +127,8 @@ export async function POST(request: Request) {
   return NextResponse.json({
     ok: true,
     path: `/uploads/${folder}/${filename}`,
+    name: file.name,
+    type: extension.toUpperCase(),
+    sizeKb: Math.max(1, Math.round(file.size / 1024)),
   });
 }

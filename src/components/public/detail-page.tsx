@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdminCrudTools } from "@/components/public/admin-crud-tools";
 import { AdminInlineTools } from "@/components/public/admin-inline-tools";
+import { NewsMediaSection } from "@/components/public/news-media-section";
 import { SiteShell } from "@/components/public/site-shell";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
 import { getAdminCrudAvailableConfig, getAdminCrudRow } from "@/lib/admin-crud-server";
@@ -96,6 +97,11 @@ export async function DetailPage({ active, backHref, backLabel, item, permission
             ) : !item.description ? (
               <p>รายละเอียดนี้จะเชื่อมจากฐานข้อมูลเดิมในขั้นตอนย้ายเนื้อหาเต็มรูปแบบ</p>
             ) : null}
+            <NewsMediaSection
+              galleryImages={item.galleryImages}
+              attachments={item.attachments}
+              externalLinks={item.externalLinks}
+            />
             {item.metric ? <p>ข้อมูลประกอบ: {item.metric}</p> : null}
             {item.date ? <p>วันที่เผยแพร่: {displayDate(item.date)}</p> : null}
           </CardContent>
