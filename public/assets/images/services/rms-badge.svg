@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
+  <rect x="12" y="12" width="136" height="136" rx="34" fill="#FFF8E7"/>
+  <rect x="12" y="12" width="136" height="136" rx="34" stroke="#D6A33A" stroke-width="4"/>
+  <rect x="36" y="36" width="88" height="88" rx="24" fill="#FFFFFF"/>
+  <rect x="36" y="36" width="88" height="88" rx="24" stroke="#B88410" stroke-width="3"/>
+  <text x="80" y="90" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="34" font-weight="800" fill="#8A5D00">RMS</text>
+</svg>

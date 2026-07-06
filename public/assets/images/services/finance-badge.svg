@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" fill="none">
+  <rect x="12" y="12" width="136" height="136" rx="34" fill="#F6F4FF"/>
+  <rect x="12" y="12" width="136" height="136" rx="34" stroke="#7B65C5" stroke-width="4"/>
+  <rect x="34" y="34" width="92" height="92" rx="26" fill="#FFFFFF" stroke="#6A54AF" stroke-width="3"/>
+  <text x="80" y="90" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="800" fill="#56429A">ACC</text>
+</svg>
