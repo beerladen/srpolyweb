@@ -1,8 +1,37 @@
-ALTER TABLE content_pages
-  ADD COLUMN IF NOT EXISTS content_type VARCHAR(60) NOT NULL DEFAULT 'general' AFTER body,
-  ADD COLUMN IF NOT EXISTS cover_image VARCHAR(500) NULL AFTER content_type,
-  ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(500) NULL AFTER cover_image,
-  ADD COLUMN IF NOT EXISTS source_url VARCHAR(500) NULL AFTER nav_key;
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
+DELIMITER //
+CREATE PROCEDURE srpoly_add_column_if_missing(
+  IN table_name_value VARCHAR(64),
+  IN column_name_value VARCHAR(64),
+  IN column_definition_value TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = table_name_value
+      AND column_name = column_name_value
+  ) THEN
+    SET @srpoly_add_column_sql = CONCAT(
+      'ALTER TABLE `',
+      REPLACE(table_name_value, '`', '``'),
+      '` ADD COLUMN ',
+      column_definition_value
+    );
+    PREPARE srpoly_add_column_stmt FROM @srpoly_add_column_sql;
+    EXECUTE srpoly_add_column_stmt;
+    DEALLOCATE PREPARE srpoly_add_column_stmt;
+  END IF;
+END//
+DELIMITER ;
+
+CALL srpoly_add_column_if_missing('content_pages', 'content_type', 'content_type VARCHAR(60) NOT NULL DEFAULT ''general'' AFTER body');
+CALL srpoly_add_column_if_missing('content_pages', 'cover_image', 'cover_image VARCHAR(500) NULL AFTER content_type');
+CALL srpoly_add_column_if_missing('content_pages', 'attachment_path', 'attachment_path VARCHAR(500) NULL AFTER cover_image');
+CALL srpoly_add_column_if_missing('content_pages', 'source_url', 'source_url VARCHAR(500) NULL AFTER nav_key');
+
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
 
 INSERT INTO content_pages
   (slug, title, summary, body, content_type, cover_image, attachment_path, nav_key, source_url, status, created_at, updated_at)

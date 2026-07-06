@@ -1,17 +1,44 @@
-ALTER TABLE content_pages
-  ADD COLUMN IF NOT EXISTS content_type VARCHAR(60) NOT NULL DEFAULT 'general' AFTER body,
-  ADD COLUMN IF NOT EXISTS cover_image VARCHAR(500) NULL AFTER content_type,
-  ADD COLUMN IF NOT EXISTS attachment_path VARCHAR(500) NULL AFTER cover_image,
-  ADD COLUMN IF NOT EXISTS source_url VARCHAR(500) NULL AFTER attachment_path;
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
+DELIMITER //
+CREATE PROCEDURE srpoly_add_column_if_missing(
+  IN table_name_value VARCHAR(64),
+  IN column_name_value VARCHAR(64),
+  IN column_definition_value TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = table_name_value
+      AND column_name = column_name_value
+  ) THEN
+    SET @srpoly_add_column_sql = CONCAT(
+      'ALTER TABLE `',
+      REPLACE(table_name_value, '`', '``'),
+      '` ADD COLUMN ',
+      column_definition_value
+    );
+    PREPARE srpoly_add_column_stmt FROM @srpoly_add_column_sql;
+    EXECUTE srpoly_add_column_stmt;
+    DEALLOCATE PREPARE srpoly_add_column_stmt;
+  END IF;
+END//
+DELIMITER ;
 
-ALTER TABLE personnel_profiles
-  ADD COLUMN IF NOT EXISTS committee_role VARCHAR(255) NULL AFTER department,
-  ADD COLUMN IF NOT EXISTS contact_phone VARCHAR(100) NULL AFTER committee_role,
-  ADD COLUMN IF NOT EXISTS contact_email VARCHAR(190) NULL AFTER contact_phone,
-  ADD COLUMN IF NOT EXISTS contact_channel VARCHAR(255) NULL AFTER contact_email,
-  ADD COLUMN IF NOT EXISTS term_period VARCHAR(255) NULL AFTER contact_channel,
-  ADD COLUMN IF NOT EXISTS appointment_file VARCHAR(500) NULL AFTER photo_path,
-  ADD COLUMN IF NOT EXISTS profile_note TEXT NULL AFTER appointment_file;
+CALL srpoly_add_column_if_missing('content_pages', 'content_type', 'content_type VARCHAR(60) NOT NULL DEFAULT ''general'' AFTER body');
+CALL srpoly_add_column_if_missing('content_pages', 'cover_image', 'cover_image VARCHAR(500) NULL AFTER content_type');
+CALL srpoly_add_column_if_missing('content_pages', 'attachment_path', 'attachment_path VARCHAR(500) NULL AFTER cover_image');
+CALL srpoly_add_column_if_missing('content_pages', 'source_url', 'source_url VARCHAR(500) NULL AFTER attachment_path');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'committee_role', 'committee_role VARCHAR(255) NULL AFTER department');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'contact_phone', 'contact_phone VARCHAR(100) NULL AFTER committee_role');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'contact_email', 'contact_email VARCHAR(190) NULL AFTER contact_phone');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'contact_channel', 'contact_channel VARCHAR(255) NULL AFTER contact_email');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'term_period', 'term_period VARCHAR(255) NULL AFTER contact_channel');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'appointment_file', 'appointment_file VARCHAR(500) NULL AFTER photo_path');
+CALL srpoly_add_column_if_missing('personnel_profiles', 'profile_note', 'profile_note TEXT NULL AFTER appointment_file');
+
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
 
 UPDATE navigation_items
 SET url = '/departments', updated_at = NOW()

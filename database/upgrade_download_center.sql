@@ -1,9 +1,38 @@
-ALTER TABLE documents
-  ADD COLUMN IF NOT EXISTS file_size INT UNSIGNED NOT NULL DEFAULT 0 AFTER file_type,
-  ADD COLUMN IF NOT EXISTS service_target VARCHAR(160) NULL AFTER file_size,
-  ADD COLUMN IF NOT EXISTS tags VARCHAR(255) NULL AFTER service_target,
-  ADD COLUMN IF NOT EXISTS is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER tags,
-  ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0 AFTER is_featured;
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
+DELIMITER //
+CREATE PROCEDURE srpoly_add_column_if_missing(
+  IN table_name_value VARCHAR(64),
+  IN column_name_value VARCHAR(64),
+  IN column_definition_value TEXT
+)
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = DATABASE()
+      AND table_name = table_name_value
+      AND column_name = column_name_value
+  ) THEN
+    SET @srpoly_add_column_sql = CONCAT(
+      'ALTER TABLE `',
+      REPLACE(table_name_value, '`', '``'),
+      '` ADD COLUMN ',
+      column_definition_value
+    );
+    PREPARE srpoly_add_column_stmt FROM @srpoly_add_column_sql;
+    EXECUTE srpoly_add_column_stmt;
+    DEALLOCATE PREPARE srpoly_add_column_stmt;
+  END IF;
+END//
+DELIMITER ;
+
+CALL srpoly_add_column_if_missing('documents', 'file_size', 'file_size INT UNSIGNED NOT NULL DEFAULT 0 AFTER file_type');
+CALL srpoly_add_column_if_missing('documents', 'service_target', 'service_target VARCHAR(160) NULL AFTER file_size');
+CALL srpoly_add_column_if_missing('documents', 'tags', 'tags VARCHAR(255) NULL AFTER service_target');
+CALL srpoly_add_column_if_missing('documents', 'is_featured', 'is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER tags');
+CALL srpoly_add_column_if_missing('documents', 'sort_order', 'sort_order INT NOT NULL DEFAULT 0 AFTER is_featured');
+
+DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
 
 CREATE TABLE IF NOT EXISTS document_download_logs (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT,
