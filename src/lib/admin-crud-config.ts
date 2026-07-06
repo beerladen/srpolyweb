@@ -539,7 +539,20 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
         type: "image",
         uploadFolder: "news",
         placeholder: "assets/images/news.jpg",
-        uploadHint: "ภาพปกข่าวแนะนำ 1200 x 675 px อัตราส่วน 16:9 ใช้ JPG/WebP เพื่อให้ภาพเด่นและรายการข่าวแสดงสวยเท่ากัน",
+        uploadHint: "ภาพปกข่าวเด่นแนะนำ 1600 x 900 px หรือ 1920 x 1080 px อัตราส่วน 16:9 ใช้ JPG/WebP ไม่เกิน 2 MB และเว้นข้อความสำคัญจากขอบภาพ 10-15%",
+      },
+      {
+        name: "cover_display_mode",
+        label: "รูปแบบการแสดงภาพปก",
+        type: "select",
+        defaultValue: "cover",
+        optionalColumn: true,
+        span: "full",
+        options: [
+          { value: "cover", label: "เต็มกรอบ / ครอปสวย เหมาะกับภาพถ่าย" },
+          { value: "contain", label: "แสดงเต็มภาพ เหมาะกับโปสเตอร์ หนังสือราชการ ใบประกาศ หรือภาพที่มีข้อความ" },
+        ],
+        description: "ถ้าภาพมีข้อความหรือเป็นเอกสาร ให้เลือกแสดงเต็มภาพเพื่อไม่ให้ภาพถูกตัด",
       },
       {
         name: "gallery_images",

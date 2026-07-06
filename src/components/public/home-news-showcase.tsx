@@ -36,6 +36,10 @@ function imageStyle(item: ContentItem) {
   return { backgroundImage: `url("${withBasePath(item.image ?? "/assets/images/hero-campus.png")}")` };
 }
 
+function imageFitClass(item: ContentItem) {
+  return item.coverDisplayMode === "contain" ? "bg-contain bg-center bg-no-repeat" : "bg-cover bg-center";
+}
+
 function matchesCategory(item: ContentItem, category: NewsCategory | null): boolean {
   if (!category || category.slug === "all") {
     return true;
@@ -153,9 +157,19 @@ export function HomeNewsShowcase({
 
         {leadItem ? (
           <div className="grid gap-4 lg:grid-cols-[minmax(0,1.08fr)_minmax(360px,0.92fr)]">
-            <article className="relative min-h-[440px] overflow-hidden rounded-lg border border-blue-100 bg-slate-900 shadow-xl shadow-blue-950/10">
-              <div className="absolute inset-0 bg-cover bg-center" style={imageStyle(leadItem)} />
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent" />
+            <article
+              className={`relative min-h-[440px] overflow-hidden rounded-lg border border-blue-100 shadow-xl shadow-blue-950/10 ${
+                leadItem.coverDisplayMode === "contain" ? "bg-slate-50" : "bg-slate-900"
+              }`}
+            >
+              <div className={`absolute inset-0 ${imageFitClass(leadItem)}`} style={imageStyle(leadItem)} />
+              <div
+                className={`absolute inset-0 ${
+                  leadItem.coverDisplayMode === "contain"
+                    ? "bg-gradient-to-t from-slate-950/90 via-slate-950/35 to-slate-950/5"
+                    : "bg-gradient-to-t from-slate-950 via-slate-950/45 to-transparent"
+                }`}
+              />
               <div className="relative flex min-h-[440px] flex-col justify-end gap-4 p-5 text-white md:p-7">
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge className="bg-sky-400 text-blue-950 hover:bg-sky-400">
@@ -208,7 +222,12 @@ export function HomeNewsShowcase({
                   key={item.id}
                   className="grid h-20 grid-cols-[104px_1fr] overflow-hidden rounded-md border border-blue-100 bg-white shadow-sm shadow-blue-950/5 transition-colors hover:border-blue-200 hover:bg-sky-50/40 sm:grid-cols-[128px_1fr]"
                 >
-                  <Link href={item.href} className="h-20 bg-cover bg-center" style={imageStyle(item)} aria-label={item.title} />
+                  <Link
+                    href={item.href}
+                    className={`h-20 bg-white ${imageFitClass(item)}`}
+                    style={imageStyle(item)}
+                    aria-label={item.title}
+                  />
                   <div className="flex min-w-0 flex-col justify-center gap-1 overflow-hidden p-2.5">
                     <div className="flex min-w-0 items-center justify-between gap-2">
                       <span className="flex min-w-0 items-center gap-2 text-xs">

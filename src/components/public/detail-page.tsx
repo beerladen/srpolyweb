@@ -20,6 +20,12 @@ function displayDate(value?: string | Date): string {
   return value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
 }
 
+function coverImageClass(item: ContentItem): string {
+  return item.coverDisplayMode === "contain"
+    ? "aspect-video min-h-72 bg-contain bg-center bg-no-repeat bg-slate-50"
+    : "min-h-72 bg-cover bg-center";
+}
+
 type DetailPageProps = {
   active: string;
   backHref: string;
@@ -83,7 +89,7 @@ export async function DetailPage({ active, backHref, backLabel, item, permission
           <CardContent className="flex flex-col gap-4 text-sm leading-7 text-muted-foreground">
             {item.image ? (
               <div
-                className="min-h-72 rounded-lg border bg-cover bg-center"
+                className={`${coverImageClass(item)} rounded-lg border`}
                 style={{ backgroundImage: `url("${withBasePath(item.image)}")` }}
                 aria-label={item.title}
               />

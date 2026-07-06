@@ -30,6 +30,7 @@ export type ContentItem = {
   status?: string;
   date?: string;
   image?: string;
+  coverDisplayMode?: "cover" | "contain";
   metric?: string;
   isFeatured?: boolean;
   galleryImages?: MediaItem[];
@@ -163,6 +164,7 @@ type RawNews = {
   title: string;
   slug: string;
   cover_image: string | null;
+  cover_display_mode?: string | null;
   summary: string | null;
   content?: string | null;
   status: string;
@@ -188,7 +190,7 @@ async function getOptionalNewsMediaSelect(): Promise<string> {
 
   const rows = await queryRows<{ Field: string }>("SHOW COLUMNS FROM news");
   const columns = new Set(rows?.map((row) => row.Field) ?? []);
-  const optionalColumns = ["gallery_images", "attachment_files", "external_links", "sync_to_downloads"];
+  const optionalColumns = ["cover_display_mode", "gallery_images", "attachment_files", "external_links", "sync_to_downloads"];
   const selectClause = optionalColumns
     .map((column) => (columns.has(column) ? `n.${column}` : `NULL AS ${column}`))
     .join(", ");
@@ -708,6 +710,7 @@ function mapNews(row: RawNews): ContentItem {
     status: row.status,
     date: normalizeDate(row.published_at),
     image: publicAssetPath(row.cover_image) ?? publicAssetPath("/assets/images/hero-campus.png"),
+    coverDisplayMode: row.cover_display_mode === "contain" ? "contain" : "cover",
     metric: row.view_count ? `${row.view_count.toLocaleString("th-TH")} ครั้ง` : undefined,
     isFeatured: Boolean(Number(row.is_featured ?? 0)),
     galleryImages: parseMediaItems(row.gallery_images),

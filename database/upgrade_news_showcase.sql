@@ -28,6 +28,7 @@ DELIMITER ;
 
 CALL srpoly_add_column_if_missing('news', 'is_featured', 'is_featured TINYINT(1) NOT NULL DEFAULT 0 AFTER view_count');
 CALL srpoly_add_column_if_missing('news', 'featured_sort_order', 'featured_sort_order INT NOT NULL DEFAULT 0 AFTER is_featured');
+CALL srpoly_add_column_if_missing('news', 'cover_display_mode', 'cover_display_mode VARCHAR(20) NOT NULL DEFAULT ''cover'' AFTER cover_image');
 
 DROP PROCEDURE IF EXISTS srpoly_add_column_if_missing;
 

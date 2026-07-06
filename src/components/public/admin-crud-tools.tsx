@@ -357,7 +357,7 @@ export function AdminCrudTools({
 
     if (field.type === "select") {
       return (
-        <Field key={field.name}>
+        <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
           <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
           <Select value={textInputValue(value)} onValueChange={(nextValue) => setFieldValue(field.name, nextValue)}>
             <SelectTrigger id={id} className="w-full">
@@ -378,6 +378,7 @@ export function AdminCrudTools({
 
     if (field.type === "image") {
       const imagePath = publicUploadPath(value);
+      const isFullImagePreview = field.name === "cover_image" && values.cover_display_mode === "contain";
 
       return (
         <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
@@ -410,7 +411,9 @@ export function AdminCrudTools({
           </div>
           {imagePath ? (
             <div
-              className="min-h-32 rounded-md border bg-muted bg-cover bg-center"
+              className={`min-h-32 rounded-md border bg-muted ${
+                isFullImagePreview ? "bg-contain bg-center bg-no-repeat" : "bg-cover bg-center"
+              }`}
               style={{ backgroundImage: `url("${imagePath}")` }}
               aria-label={`ตัวอย่าง${field.label}`}
             />
