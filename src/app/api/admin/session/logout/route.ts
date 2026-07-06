@@ -14,9 +14,14 @@ function expireCookie(response: NextResponse, name: string) {
   }
 }
 
-export function GET(request: Request) {
+export function GET() {
   const basePath = (process.env.NEXT_PUBLIC_BASE_PATH ?? "").replace(/\/$/, "");
-  const response = NextResponse.redirect(new URL(`${basePath}/signin`, request.url));
+  const response = new NextResponse(null, {
+    status: 307,
+    headers: {
+      Location: `${basePath}/signin`,
+    },
+  });
   expireCookie(response, adminSessionCookieName);
   expireCookie(response, deprecatedAdminSessionCookieName);
   expireCookie(response, legacyAdminCookieName);
