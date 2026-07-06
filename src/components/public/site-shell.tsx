@@ -55,13 +55,13 @@ export async function SiteShell({ active, settings, navigation, adminUser, child
                     ตั้งค่าเว็บ
                   </Link>
                 ) : null}
-                <Link
+                <a
                   href={withBasePath("/api/admin/session/logout")}
                   className="inline-flex items-center gap-1.5 rounded-md border border-white/25 px-3 py-1.5 font-semibold text-white transition-colors hover:bg-white/10"
                 >
                   <LogOut className="size-3.5" />
                   ออกจากระบบ
-                </Link>
+                </a>
               </div>
             </div>
           </div>
