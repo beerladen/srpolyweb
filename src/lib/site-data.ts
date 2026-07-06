@@ -817,7 +817,7 @@ export async function getSiteOverview(): Promise<SiteOverview> {
       })) ?? null,
       courseGroupsFallback
     ),
-    news: fallbackWhenEmpty<ContentItem>(newsRows?.map(mapNews) ?? null, newsFallback),
+    news: newsRows === null ? newsFallback : newsRows.map(mapNews),
     documents: fallbackWhenEmpty<ContentItem>(
       documentRows?.map((row) => ({
         id: row.id,
