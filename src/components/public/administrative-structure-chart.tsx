@@ -48,6 +48,7 @@ type Theme = {
   header: string;
   text: string;
   bullet: string;
+  line: string;
   ring: string;
 };
 
@@ -58,6 +59,7 @@ const themes: Record<string, Theme> = {
     header: "from-blue-700 to-sky-500",
     text: "text-blue-800",
     bullet: "bg-blue-600",
+    line: "border-blue-300",
     ring: "ring-blue-100",
   },
   teal: {
@@ -66,6 +68,7 @@ const themes: Record<string, Theme> = {
     header: "from-teal-600 to-emerald-500",
     text: "text-teal-800",
     bullet: "bg-teal-600",
+    line: "border-teal-300",
     ring: "ring-teal-100",
   },
   violet: {
@@ -74,6 +77,7 @@ const themes: Record<string, Theme> = {
     header: "from-violet-700 to-purple-500",
     text: "text-violet-800",
     bullet: "bg-violet-600",
+    line: "border-violet-300",
     ring: "ring-violet-100",
   },
   orange: {
@@ -82,6 +86,7 @@ const themes: Record<string, Theme> = {
     header: "from-orange-600 to-amber-400",
     text: "text-orange-800",
     bullet: "bg-orange-500",
+    line: "border-orange-300",
     ring: "ring-orange-100",
   },
   purple: {
@@ -90,6 +95,7 @@ const themes: Record<string, Theme> = {
     header: "from-purple-700 to-fuchsia-500",
     text: "text-purple-800",
     bullet: "bg-purple-600",
+    line: "border-purple-300",
     ring: "ring-purple-100",
   },
 };
@@ -277,16 +283,21 @@ function UnitTools({
   );
 }
 
-function DutyList({ items, theme }: { items: string[]; theme: Theme }) {
+function DutyList({ items, theme, compact = false }: { items: string[]; theme: Theme; compact?: boolean }) {
   if (!items.length) {
     return null;
   }
 
   return (
-    <ul className="grid gap-2">
+    <ul className={`relative grid gap-2 pl-5 before:absolute before:bottom-4 before:left-2 before:top-4 before:border-l-2 before:border-dashed ${theme.line}`}>
       {items.map((item) => (
-        <li key={item} className="flex items-start gap-2 rounded-md border border-slate-100 bg-white/90 px-3 py-2 text-sm leading-6 text-slate-700 shadow-sm shadow-blue-950/5">
-          <span className={`mt-2 size-2 shrink-0 rounded-full ${theme.bullet}`} />
+        <li
+          key={item}
+          className={`relative rounded-md border border-slate-100 bg-white/95 px-3 shadow-sm shadow-blue-950/5 ${
+            compact ? "py-1.5 text-xs leading-5" : "py-2 text-sm leading-6"
+          } text-slate-700`}
+        >
+          <span className={`absolute -left-[19px] top-1/2 size-2.5 -translate-y-1/2 rounded-full ring-4 ring-white ${theme.bullet}`} />
           <span>{item}</span>
         </li>
       ))}
@@ -299,26 +310,28 @@ function DivisionCard({
   config,
   crudRowsById,
   user,
+  wide = false,
 }: {
   unit: AdministrativeStructureUnit;
   config?: AdminCrudModuleConfig | null;
   crudRowsById: Map<number, AdminCrudRow>;
   user?: AdminUser | null;
+  wide?: boolean;
 }) {
   const theme = unitTheme(unit);
   const duties = splitItems(unit.duties_text);
   const secondaryDuties = splitItems(unit.secondary_duties_text);
 
   return (
-    <article className={`overflow-hidden rounded-lg border bg-white shadow-lg shadow-blue-950/5 ${theme.border}`}>
-      <div className={`bg-gradient-to-r ${theme.header} p-4 text-white`}>
-        <div className="flex items-start gap-3">
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-sm">
+    <article className={`overflow-hidden rounded-lg border bg-white shadow-lg shadow-blue-950/5 ${theme.border} ${wide ? "lg:col-span-2" : ""}`}>
+      <div className={`bg-gradient-to-r ${theme.header} px-4 py-3 text-white`}>
+        <div className={`flex items-center gap-3 ${wide ? "justify-center text-center md:justify-start md:text-left" : ""}`}>
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-sm ring-1 ring-white/70">
             <UnitIcon unit={unit} />
           </span>
           <div className="min-w-0 flex-1">
-            <h3 className="text-lg font-extrabold leading-7">{unit.title}</h3>
-            {unit.leader_name ? <p className="mt-1 text-sm font-semibold text-white/95">{unit.leader_name}</p> : null}
+            <h3 className={`${wide ? "text-xl" : "text-lg"} font-extrabold leading-7`}>{unit.title}</h3>
+            {unit.leader_name ? <p className="mt-0.5 text-sm font-semibold text-white/95">{unit.leader_name}</p> : null}
             {unit.leader_position ? <p className="mt-0.5 text-xs leading-5 text-white/80">{unit.leader_position}</p> : null}
           </div>
           <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} />
@@ -326,16 +339,18 @@ function DivisionCard({
       </div>
       <div className={`grid gap-4 p-4 ${theme.soft}`}>
         {unit.description ? <p className="text-sm leading-6 text-slate-700">{unit.description}</p> : null}
-        <section className="rounded-lg border border-white/80 bg-white/55 p-3">
-          {unit.duties_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.duties_title}</h4> : null}
-          <DutyList items={duties} theme={theme} />
-        </section>
-        {unit.secondary_title || secondaryDuties.length ? (
-          <section className="rounded-lg border border-white/80 bg-white/55 p-3">
-            {unit.secondary_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.secondary_title}</h4> : null}
-            <DutyList items={secondaryDuties} theme={theme} />
+        <div className={`grid gap-4 ${wide && secondaryDuties.length ? "md:grid-cols-2" : ""}`}>
+          <section className="rounded-lg border border-white/80 bg-white/60 p-3">
+            {unit.duties_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.duties_title}</h4> : null}
+            <DutyList items={duties} theme={theme} compact={wide} />
           </section>
-        ) : null}
+          {unit.secondary_title || secondaryDuties.length ? (
+            <section className="rounded-lg border border-white/80 bg-white/60 p-3">
+              {unit.secondary_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.secondary_title}</h4> : null}
+              <DutyList items={secondaryDuties} theme={theme} compact={wide} />
+            </section>
+          ) : null}
+        </div>
       </div>
     </article>
   );
@@ -356,6 +371,15 @@ export function AdministrativeStructureChart({
   const inactiveUnits = units.filter((unit) => unit.status !== "active" && unit.status !== "published" && unit.status !== "1");
   const crudRowsById = new Map((crudRows ?? []).map((row) => [row.id, row]));
   const canManageStructure = Boolean(user && config && canAccess(user.effectivePermissions, config.permission));
+  const branchStops = divisions.map((unit, index) => {
+    if (unit.secondary_title || splitItems(unit.secondary_duties_text).length) {
+      return 80;
+    }
+
+    return [10, 30, 50, 70][index] ?? Math.min(90, 10 + index * 20);
+  });
+  const branchStart = branchStops.length ? Math.min(...branchStops) : 10;
+  const branchEnd = branchStops.length ? Math.max(...branchStops) : 90;
   const addInitialValues: Record<string, AdminCrudValue> = {
     academic_year: year,
     unit_type: "division",
@@ -365,24 +389,24 @@ export function AdministrativeStructureChart({
   };
 
   return (
-    <section className="overflow-hidden rounded-lg border border-blue-100 bg-gradient-to-br from-sky-50 via-white to-blue-50 shadow-sm shadow-blue-950/5">
-      <div className="relative px-4 py-8 md:px-8">
-        <div className="pointer-events-none absolute left-0 top-0 h-44 w-44 rounded-full bg-sky-100/60 blur-3xl" />
-        <div className="pointer-events-none absolute right-0 top-10 h-56 w-56 rounded-full bg-blue-100/70 blur-3xl" />
-        <div className="relative flex flex-col gap-4 text-center">
-          <Badge variant="outline" className="mx-auto border-sky-200 bg-white/85 text-sky-700">
-            ประจำปีการศึกษา {year}
-          </Badge>
+    <section className="overflow-hidden border-y border-blue-100 bg-[linear-gradient(135deg,#f7fcff_0%,#ffffff_48%,#eef7ff_100%)] shadow-sm shadow-blue-950/5">
+      <div className="relative mx-auto max-w-[1580px] px-4 py-8 md:px-8">
+        <div className="relative z-10 flex flex-col gap-4 text-center">
           <div>
-            <h2 className="text-3xl font-extrabold tracking-normal text-blue-950 md:text-4xl">
+            <h2 className="text-3xl font-extrabold tracking-normal text-blue-950 md:text-5xl">
               โครงสร้างการบริหารวิทยาลัยสารพัดช่างสุรินทร์
             </h2>
-            <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
-              {pageSummary || "แสดงการมอบหมายงาน ฝ่ายหลัก งานสนับสนุน และแผนกวิชาของวิทยาลัยในรูปแบบแผนผังที่จัดการข้อมูลได้จากระบบหลังบ้าน"}
-            </p>
+            <div className="mt-3 flex items-center justify-center gap-4">
+              <span className="hidden h-px w-28 bg-cyan-300 md:block" />
+              <Badge variant="outline" className="border-cyan-200 bg-white/90 px-4 py-1 text-base font-bold text-cyan-700">
+                ประจำปีการศึกษา {year}
+              </Badge>
+              <span className="hidden h-px w-28 bg-cyan-300 md:block" />
+            </div>
+            {pageSummary ? <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">{pageSummary}</p> : null}
           </div>
           {canManageStructure && config ? (
-            <div className="flex justify-center">
+            <div className="flex justify-center lg:absolute lg:right-0 lg:top-0">
               <AdminCrudCreateButton
                 user={user}
                 permission={config.permission}
@@ -398,11 +422,13 @@ export function AdministrativeStructureChart({
           ) : null}
         </div>
 
-        <div className="relative mt-8">
-          <div className="mx-auto grid max-w-5xl gap-4 lg:grid-cols-[1fr_300px] lg:items-center">
-            <article className="mx-auto w-full max-w-xl rounded-lg border border-blue-200 bg-gradient-to-r from-blue-800 to-blue-600 p-5 text-white shadow-xl shadow-blue-950/15">
+        <div className="relative z-10 mx-auto mt-8 max-w-[1480px]">
+          <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(430px,520px)_minmax(280px,340px)_minmax(0,1fr)] lg:items-center">
+            <div className="hidden lg:block" />
+            <article className="relative mx-auto w-full max-w-xl rounded-lg border border-blue-300 bg-gradient-to-r from-blue-800 to-blue-600 p-5 text-white shadow-xl shadow-blue-950/15">
+              <span className="absolute left-1/2 top-full hidden h-10 border-l-2 border-blue-500 lg:block" />
               <div className="grid gap-4 sm:grid-cols-[72px_1fr_auto] sm:items-center">
-                <span className="mx-auto flex size-16 items-center justify-center rounded-full border border-white/40 bg-white/15">
+                <span className="mx-auto flex size-16 items-center justify-center rounded-full border border-white/50 bg-white/15">
                   <UnitIcon unit={director} className="size-8" />
                 </span>
                 <div className="text-center sm:text-left">
@@ -415,7 +441,9 @@ export function AdministrativeStructureChart({
             </article>
 
             {committee ? (
-              <article className="rounded-lg border border-purple-200 bg-white p-4 shadow-lg shadow-purple-950/5">
+              <article className="relative rounded-lg border border-purple-300 bg-white p-4 shadow-lg shadow-purple-950/5">
+                <span className="absolute right-full top-1/2 hidden w-12 -translate-y-1/2 border-t-2 border-dashed border-slate-400 lg:block" />
+                <span className="absolute -left-[8px] top-1/2 hidden size-2.5 -translate-y-1/2 rotate-45 border-r-2 border-t-2 border-slate-400 lg:block" />
                 <div className="flex items-center gap-3">
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
                     <UnitIcon unit={committee} />
@@ -427,14 +455,41 @@ export function AdministrativeStructureChart({
                   <UnitTools unit={committee} config={config} crudRowsById={crudRowsById} user={user} />
                 </div>
               </article>
-            ) : null}
+            ) : (
+              <div className="hidden lg:block" />
+            )}
+            <div className="hidden lg:block" />
           </div>
 
-          <div className="mx-auto mt-5 hidden h-8 max-w-5xl border-x-2 border-t-2 border-blue-300 lg:block" />
-          <div className="mt-5 grid gap-5 lg:grid-cols-4">
-            {divisions.map((unit) => (
-              <DivisionCard key={unit.unit_key} unit={unit} config={config} crudRowsById={crudRowsById} user={user} />
-            ))}
+          {divisions.length ? (
+            <div className="relative mx-auto mt-10 hidden h-12 max-w-6xl lg:block">
+              <span
+                className="absolute top-0 border-t-2 border-blue-500"
+                style={{ left: `${branchStart}%`, right: `${100 - branchEnd}%` }}
+              />
+              {branchStops.map((stop, index) => (
+                <span key={`${stop}-${index}`} className="absolute top-0 h-9 border-l-2 border-blue-500" style={{ left: `${stop}%` }}>
+                  <span className="absolute -bottom-[1px] -left-[5px] size-2.5 rotate-45 border-b-2 border-r-2 border-blue-500" />
+                </span>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="mt-1 grid gap-5 lg:grid-cols-5">
+            {divisions.map((unit) => {
+              const wide = Boolean(unit.secondary_title || splitItems(unit.secondary_duties_text).length);
+
+              return (
+                <DivisionCard
+                  key={unit.unit_key}
+                  unit={unit}
+                  config={config}
+                  crudRowsById={crudRowsById}
+                  user={user}
+                  wide={wide}
+                />
+              );
+            })}
           </div>
         </div>
 

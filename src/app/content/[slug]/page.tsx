@@ -376,12 +376,20 @@ export default async function ContentPage({
 
   return (
     <SiteShell active={page.navKey ?? "content"} settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
-      <section className="mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 md:px-6">
-        <SectionHeading
-          title={page.title}
-          description={page.summary}
-          action={<ContentPageAdminTools user={adminUser} page={page} />}
-        />
+      <section
+        className={
+          shouldRenderAdministrativeStructure
+            ? "mx-auto flex w-full max-w-none flex-col gap-0 px-0 py-0"
+            : "mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 md:px-6"
+        }
+      >
+        {shouldRenderAdministrativeStructure ? null : (
+          <SectionHeading
+            title={page.title}
+            description={page.summary}
+            action={<ContentPageAdminTools user={adminUser} page={page} />}
+          />
+        )}
         {coverImage ? (
           <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
             <CardContent className="p-4">
