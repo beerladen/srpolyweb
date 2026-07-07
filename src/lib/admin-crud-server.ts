@@ -320,6 +320,14 @@ function coerceFieldValue(
 
   if (field.type === "number") {
     if (rawValue === null || rawValue === undefined || rawValue === "") {
+      if (field.defaultValue !== undefined && field.defaultValue !== null && field.defaultValue !== "") {
+        const defaultNumberValue = Number(field.defaultValue);
+
+        if (Number.isFinite(defaultNumberValue)) {
+          return { ok: true, value: defaultNumberValue };
+        }
+      }
+
       return field.required
         ? { ok: false, message: `กรุณาระบุ${field.label}` }
         : { ok: true, value: null };
@@ -350,6 +358,14 @@ function coerceFieldValue(
   }
 
   const textValue = String(rawValue ?? "").trim();
+
+  if (field.required && !textValue && field.defaultValue !== undefined && field.defaultValue !== null) {
+    const defaultTextValue = String(field.defaultValue).trim();
+
+    if (defaultTextValue) {
+      return { ok: true, value: defaultTextValue };
+    }
+  }
 
   if (field.required && !textValue) {
     return { ok: false, message: `กรุณาระบุ${field.label}` };

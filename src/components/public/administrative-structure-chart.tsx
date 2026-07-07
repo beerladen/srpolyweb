@@ -1,7 +1,9 @@
 import {
+  ArrowRight,
   BookOpen,
   BriefcaseBusiness,
   Building2,
+  ChevronDown,
   ClipboardCheck,
   Landmark,
   Network,
@@ -251,20 +253,53 @@ function UnitTools({
   config,
   crudRowsById,
   user,
+  label = "จัดการ",
 }: {
   unit: AdministrativeStructureUnit;
   config?: AdminCrudModuleConfig | null;
   crudRowsById: Map<number, AdminCrudRow>;
   user?: AdminUser | null;
+  label?: string;
 }) {
-  if (!config || unit.id < 0) {
+  if (!config || !user || !canAccess(user.effectivePermissions, config.permission)) {
     return null;
   }
 
-  const row = crudRowsById.get(unit.id);
+  const row = unit.id > 0 ? crudRowsById.get(unit.id) : null;
 
   if (!row) {
-    return null;
+    const initialValues: Record<string, AdminCrudValue> = {
+      academic_year: unit.academic_year,
+      unit_key: unit.unit_key,
+      unit_type: unit.unit_type,
+      title: unit.title,
+      leader_name: unit.leader_name,
+      leader_position: unit.leader_position,
+      description: unit.description,
+      duties_title: unit.duties_title,
+      duties_text: unit.duties_text,
+      secondary_title: unit.secondary_title,
+      secondary_duties_text: unit.secondary_duties_text,
+      color_theme: unit.color_theme,
+      icon_name: unit.icon_name,
+      sort_order: unit.sort_order,
+      status: unit.status === "published" ? "active" : unit.status,
+    };
+
+    return (
+      <AdminCrudTools
+        user={user}
+        permission={config.permission}
+        moduleKey={config.key}
+        moduleLabel={config.label}
+        fields={config.fields}
+        label={label}
+        triggerSize="sm"
+        adminHref="/admin/modules/administrative_structure"
+        afterCreateHref="/content/administrative-structure"
+        initialValues={initialValues}
+      />
+    );
   }
 
   return (
@@ -275,12 +310,29 @@ function UnitTools({
       moduleLabel={config.label}
       fields={config.fields}
       row={row}
-      label="จัดการ"
+      label={label}
       triggerSize="sm"
       adminHref="/admin/modules/administrative_structure"
       afterDeleteHref="/admin/modules/administrative_structure"
     />
   );
+}
+
+type DutyItem = {
+  title: string;
+  people: string[];
+};
+
+function parseDutyItem(value: string): DutyItem {
+  const [rawTitle, rawPeople = ""] = value
+    .split(/\s*(?:\||::|->)\s*|\s-\sผู้รับผิดชอบ\s*:?\s*/i)
+    .map((part) => part.trim());
+  const people = rawPeople
+    .split(/[,;、\n]/)
+    .map((person) => person.trim())
+    .filter(Boolean);
+
+  return { title: rawTitle || value, people };
 }
 
 function DutyList({ items, theme, compact = false }: { items: string[]; theme: Theme; compact?: boolean }) {
@@ -290,7 +342,10 @@ function DutyList({ items, theme, compact = false }: { items: string[]; theme: T
 
   return (
     <ul className={`relative grid gap-2 pl-5 before:absolute before:bottom-4 before:left-2 before:top-4 before:border-l-2 before:border-dashed ${theme.line}`}>
-      {items.map((item) => (
+      {items.map((item) => {
+        const duty = parseDutyItem(item);
+
+        return (
         <li
           key={item}
           className={`relative rounded-md border border-slate-100 bg-white/95 px-3 shadow-sm shadow-blue-950/5 ${
@@ -298,9 +353,27 @@ function DutyList({ items, theme, compact = false }: { items: string[]; theme: T
           } text-slate-700`}
         >
           <span className={`absolute -left-[19px] top-1/2 size-2.5 -translate-y-1/2 rounded-full ring-4 ring-white ${theme.bullet}`} />
-          <span>{item}</span>
+          {duty.people.length ? (
+            <details className="group">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-slate-800">
+                <span>{duty.title}</span>
+                <ChevronDown className="size-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="mt-2 rounded-md bg-slate-50 px-3 py-2">
+                <p className="text-[11px] font-bold text-slate-500">ผู้รับผิดชอบ</p>
+                <ul className="mt-1 grid gap-1">
+                  {duty.people.map((person) => (
+                    <li key={person} className="text-xs leading-5 text-slate-600">{person}</li>
+                  ))}
+                </ul>
+              </div>
+            </details>
+          ) : (
+            <span>{duty.title}</span>
+          )}
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 }
@@ -341,12 +414,18 @@ function DivisionCard({
         {unit.description ? <p className="text-sm leading-6 text-slate-700">{unit.description}</p> : null}
         <div className={`grid gap-4 ${wide && secondaryDuties.length ? "md:grid-cols-2" : ""}`}>
           <section className="rounded-lg border border-white/80 bg-white/60 p-3">
-            {unit.duties_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.duties_title}</h4> : null}
+            <div className="mb-2 flex items-center justify-between gap-2">
+              {unit.duties_title ? <h4 className={`text-sm font-bold ${theme.text}`}>{unit.duties_title}</h4> : <span />}
+              <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} label="แก้งาน" />
+            </div>
             <DutyList items={duties} theme={theme} compact={wide} />
           </section>
           {unit.secondary_title || secondaryDuties.length ? (
             <section className="rounded-lg border border-white/80 bg-white/60 p-3">
-              {unit.secondary_title ? <h4 className={`mb-2 text-sm font-bold ${theme.text}`}>{unit.secondary_title}</h4> : null}
+              <div className="mb-2 flex items-center justify-between gap-2">
+                {unit.secondary_title ? <h4 className={`text-sm font-bold ${theme.text}`}>{unit.secondary_title}</h4> : <span />}
+                <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} label="แก้งานรอง" />
+              </div>
               <DutyList items={secondaryDuties} theme={theme} compact={wide} />
             </section>
           ) : null}
@@ -396,11 +475,12 @@ export function AdministrativeStructureChart({
             <h2 className="text-3xl font-extrabold tracking-normal text-blue-950 md:text-5xl">
               โครงสร้างการบริหารวิทยาลัยสารพัดช่างสุรินทร์
             </h2>
-            <div className="mt-3 flex items-center justify-center gap-4">
+            <div className="mt-3 flex flex-wrap items-center justify-center gap-4">
               <span className="hidden h-px w-28 bg-cyan-300 md:block" />
               <Badge variant="outline" className="border-cyan-200 bg-white/90 px-4 py-1 text-base font-bold text-cyan-700">
                 ประจำปีการศึกษา {year}
               </Badge>
+              <UnitTools unit={director} config={config} crudRowsById={crudRowsById} user={user} label="แก้ปี" />
               <span className="hidden h-px w-28 bg-cyan-300 md:block" />
             </div>
             {pageSummary ? <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">{pageSummary}</p> : null}
@@ -436,14 +516,14 @@ export function AdministrativeStructureChart({
                   {director.leader_name ? <p className="mt-1 text-lg font-semibold text-white/95">{director.leader_name}</p> : null}
                   {director.leader_position ? <p className="mt-1 text-sm leading-6 text-blue-100">{director.leader_position}</p> : null}
                 </div>
-                <UnitTools unit={director} config={config} crudRowsById={crudRowsById} user={user} />
+                <UnitTools unit={director} config={config} crudRowsById={crudRowsById} user={user} label="แก้กล่อง" />
               </div>
             </article>
 
             {committee ? (
               <article className="relative rounded-lg border border-purple-300 bg-white p-4 shadow-lg shadow-purple-950/5">
-                <span className="absolute right-full top-1/2 hidden w-12 -translate-y-1/2 border-t-2 border-dashed border-slate-400 lg:block" />
-                <span className="absolute -left-[8px] top-1/2 hidden size-2.5 -translate-y-1/2 rotate-45 border-r-2 border-t-2 border-slate-400 lg:block" />
+                <span className="absolute right-full top-1/2 hidden w-14 -translate-y-1/2 border-t-2 border-dashed border-slate-400 lg:block" />
+                <ArrowRight className="absolute -left-3 top-1/2 hidden size-5 -translate-y-1/2 text-slate-500 lg:block" />
                 <div className="flex items-center gap-3">
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
                     <UnitIcon unit={committee} />
@@ -452,7 +532,7 @@ export function AdministrativeStructureChart({
                     <h3 className="font-extrabold text-slate-950">{committee.title}</h3>
                     {committee.leader_position ? <p className="mt-1 text-xs leading-5 text-slate-500">{committee.leader_position}</p> : null}
                   </div>
-                  <UnitTools unit={committee} config={config} crudRowsById={crudRowsById} user={user} />
+                  <UnitTools unit={committee} config={config} crudRowsById={crudRowsById} user={user} label="แก้กล่อง" />
                 </div>
               </article>
             ) : (

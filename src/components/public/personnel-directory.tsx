@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { AdminCrudCreateButton, AdminCrudTools } from "@/components/public/admin-crud-tools";
 import type { AdminUser } from "@/lib/admin-auth";
-import type { AdminCrudModuleConfig, AdminCrudRow } from "@/lib/admin-crud-config";
+import type { AdminCrudModuleConfig, AdminCrudRow, AdminCrudValue } from "@/lib/admin-crud-config";
 import { publicAssetPath } from "@/lib/legacy-paths";
 import { canAccess } from "@/lib/permissions";
 
@@ -303,6 +303,34 @@ function percent(value: number, total: number): number {
   return Math.round((value / total) * 100);
 }
 
+function categorySectionLabel(category: string): string {
+  if (category === "teacher") return "ข้าราชการครู";
+  if (category === "employee") return "พนักงานราชการ";
+  if (category === "staff") return "เจ้าหน้าที่";
+  if (category === "executive") return "ผู้บริหาร";
+  return "บุคลากร";
+}
+
+function profileInitialValues(profile: PersonnelDirectoryProfile): Record<string, AdminCrudValue> {
+  return {
+    page_slug: "personnel-data",
+    section_title: profile.section_title || categorySectionLabel(personnelCategory(profile)),
+    full_name: profile.full_name,
+    position_title: profile.position_title,
+    department: profile.department,
+    committee_role: profile.committee_role,
+    contact_phone: profile.contact_phone,
+    contact_email: profile.contact_email,
+    contact_channel: profile.contact_channel,
+    term_period: profile.term_period,
+    photo_path: profile.photo_path,
+    appointment_file: profile.appointment_file,
+    profile_note: profile.profile_note,
+    sort_order: profile.sort_order,
+    status: "active",
+  };
+}
+
 function PersonnelPhoto({ profile }: { profile: PersonnelDirectoryProfile }) {
   const photoPath = publicAssetPath(profile.photo_path);
 
@@ -335,6 +363,7 @@ export function PersonnelDirectory({
   const summaryRowsById = new Map((summaryRows ?? []).map((row) => [row.id, row]));
   const canManagePersonnel = Boolean(user && personnelConfig && canAccess(user.effectivePermissions, personnelConfig.permission));
   const canManageSummary = Boolean(user && summaryConfig && canAccess(user.effectivePermissions, summaryConfig.permission));
+  const usingFallbackProfiles = !profiles.length;
   const directoryProfiles = profiles.length ? profiles : fallbackProfiles;
   const activeProfiles = directoryProfiles.filter((profile) => isActive(profile.status));
   const inactiveProfiles = canManagePersonnel && profiles.length ? profiles.filter((profile) => !isActive(profile.status)) : [];
@@ -382,6 +411,7 @@ export function PersonnelDirectory({
           background: `conic-gradient(#7c3aed 0 ${cumulative[0]}%, #16a34a ${cumulative[0]}% ${cumulative[1]}%, #f97316 ${cumulative[1]}% ${cumulative[2]}%, #0891b2 ${cumulative[2]}% 100%)`,
         }
       : { background: "#e2e8f0" };
+  const selectedSectionLabel = categorySectionLabel(selectedCategory);
 
   return (
     <div className="flex min-w-0 flex-col gap-5">
@@ -483,9 +513,9 @@ export function PersonnelDirectory({
               moduleKey={personnelConfig.key}
               moduleLabel={personnelConfig.label}
               fields={personnelConfig.fields}
-              label="เพิ่มบุคลากร"
+              label={`เพิ่ม${selectedSectionLabel}`}
               adminHref="/admin/modules/personnel_profiles"
-              initialValues={{ page_slug: "personnel-data", section_title: "บุคลากร", status: "active" }}
+              initialValues={{ page_slug: "personnel-data", section_title: selectedSectionLabel, status: "active" }}
             />
           ) : null}
           {summaryConfig ? (
@@ -502,6 +532,30 @@ export function PersonnelDirectory({
           ) : null}
         </div>
       </div>
+
+      {usingFallbackProfiles && canManagePersonnel && personnelConfig ? (
+        <section className="rounded-lg border border-amber-200 bg-amber-50/90 p-4 shadow-sm shadow-amber-950/5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <Badge variant="outline" className="border-amber-200 bg-white text-amber-800">ข้อมูลตัวอย่าง</Badge>
+              <h2 className="mt-2 font-bold text-slate-950">ยังไม่มีข้อมูลบุคลากรจริงในฐานข้อมูล</h2>
+              <p className="mt-1 text-sm leading-6 text-slate-600">
+                การ์ดที่เห็นเป็นข้อมูลตัวอย่างเพื่อให้หน้าเว็บไม่ว่างเปล่า หากต้องการจัดการข้าราชการครูและบุคลากรเต็มระบบ ให้เพิ่มรายการจริง ระบบจะเชื่อม CRUD และรูปภาพให้ทันที
+              </p>
+            </div>
+            <AdminCrudCreateButton
+              user={user}
+              permission={personnelConfig.permission}
+              moduleKey={personnelConfig.key}
+              moduleLabel={personnelConfig.label}
+              fields={personnelConfig.fields}
+              label="เพิ่มข้าราชการครู"
+              adminHref="/admin/modules/personnel_profiles"
+              initialValues={{ page_slug: "personnel-data", section_title: "ข้าราชการครู", status: "active" }}
+            />
+          </div>
+        </section>
+      ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="flex flex-col gap-3">
@@ -559,7 +613,7 @@ export function PersonnelDirectory({
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/content/${profile.page_slug}`}>ดูข้อมูล</Link>
                       </Button>
-                      {personnelConfig && crudRow ? (
+                      {personnelConfig && (crudRow || canManagePersonnel) ? (
                         <AdminCrudTools
                           user={user}
                           permission={personnelConfig.permission}
@@ -570,7 +624,9 @@ export function PersonnelDirectory({
                           label="จัดการ"
                           triggerSize="sm"
                           adminHref="/admin/modules/personnel_profiles"
+                          afterCreateHref="/content/personnel-data"
                           afterDeleteHref="/admin/modules/personnel_profiles"
+                          initialValues={crudRow ? undefined : profileInitialValues(profile)}
                         />
                       ) : null}
                     </div>

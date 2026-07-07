@@ -232,6 +232,8 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
     totals.pvsDualYear2 +
     totals.pvsAssociateYear1 +
     totals.pvsAssociateYear2;
+  const totalPvc = totals.p1 + totals.p2 + totals.p3;
+  const totalPvs = totals.pvsDualYear1 + totals.pvsDualYear2 + totals.pvsAssociateYear1 + totals.pvsAssociateYear2;
   const unsavedCount = drafts.filter((draft) => !draft.id).length;
 
   function handleOpenChange(nextOpen: boolean) {
@@ -413,6 +415,51 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
             ปีการศึกษา {academicYear} · {department} · แก้ไข เพิ่ม หรือลบแถวข้อมูลที่ใช้คำนวณตารางรายงานนี้
           </DialogDescription>
         </DialogHeader>
+
+        <section className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm shadow-blue-950/5">
+          <div className="flex flex-col gap-1 border-b border-blue-100 bg-blue-50/70 px-4 py-3">
+            <h3 className="font-bold text-slate-950">แถวที่กำลังจัดการบนหน้ารายงาน</h3>
+            <p className="text-xs leading-5 text-slate-500">ใช้หัวตารางเดียวกับหน้าเว็บ เพื่อให้ตรวจคอลัมน์ก่อนแก้ไขข้อมูลได้ชัดเจน</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] table-fixed border-collapse text-sm">
+              <thead>
+                <tr className="border-b border-blue-100 bg-slate-50 text-left text-xs font-bold text-slate-600">
+                  <th rowSpan={2} className="w-[18%] border-r border-blue-100 px-3 py-3">แผนก</th>
+                  <th colSpan={4} className="border-r border-blue-100 bg-blue-50 px-2 py-3 text-center text-blue-700">ระดับ ปวช.</th>
+                  <th colSpan={5} className="border-r border-blue-100 bg-emerald-50 px-2 py-3 text-center text-emerald-700">ระดับ ปวส.</th>
+                  <th rowSpan={2} className="w-[9%] px-2 py-3 text-center">รวมทั้งหมด</th>
+                </tr>
+                <tr className="border-b border-blue-100 bg-slate-50 text-xs font-bold">
+                  <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.1</th>
+                  <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.2</th>
+                  <th className="bg-blue-50 px-2 py-3 text-center text-blue-700">ปวช.3</th>
+                  <th className="border-r border-blue-100 bg-amber-50 px-2 py-3 text-center text-amber-700">รวม ปวช.</th>
+                  <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">ทวิ<br />ปี 1</th>
+                  <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">ทวิ<br />ปี 2</th>
+                  <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">สมทบ<br />ปี 1</th>
+                  <th className="bg-emerald-50 px-2 py-3 text-center leading-4 text-emerald-700">สมทบ<br />ปี 2</th>
+                  <th className="border-r border-blue-100 bg-amber-50 px-2 py-3 text-center text-amber-700">รวม ปวส.</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="bg-white text-slate-700">
+                  <td className="border-r border-blue-50 px-3 py-4 font-bold leading-5 text-slate-950">{department}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.p1)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.p2)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.p3)}</td>
+                  <td className="border-r border-blue-50 bg-amber-50/70 px-2 py-4 text-center font-semibold text-amber-700">{toThaiNumber(totalPvc)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.pvsDualYear1)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.pvsDualYear2)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.pvsAssociateYear1)}</td>
+                  <td className="px-2 py-4 text-center">{toThaiNumber(totals.pvsAssociateYear2)}</td>
+                  <td className="border-r border-blue-50 bg-amber-50/70 px-2 py-4 text-center font-semibold text-amber-700">{toThaiNumber(totalPvs)}</td>
+                  <td className="bg-blue-50/70 px-2 py-4 text-center font-bold text-blue-700">{toThaiNumber(totalAll)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <div className="grid gap-3 rounded-lg border border-blue-100 bg-white p-4 md:grid-cols-[160px_180px_1fr] md:items-end">
           <div>
