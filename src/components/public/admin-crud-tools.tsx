@@ -94,6 +94,19 @@ function textInputValue(value: AdminCrudValue): string {
   return value === null || value === undefined ? "" : String(value);
 }
 
+function optionsWithCurrentValue(
+  options: NonNullable<AdminCrudField["options"]>,
+  value: AdminCrudValue
+): NonNullable<AdminCrudField["options"]> {
+  const currentValue = textInputValue(value);
+
+  if (!currentValue || options.some((option) => option.value === currentValue)) {
+    return options;
+  }
+
+  return [{ value: currentValue, label: `${currentValue} (ค่าเดิม)` }, ...options];
+}
+
 function isImageUploadField(field: AdminCrudField): boolean {
   return field.type === "image" || field.type === "gallery";
 }
@@ -352,6 +365,32 @@ export function AdminCrudTools({
   function renderField(field: AdminCrudField) {
     const id = `${fieldId}-${field.name}`;
     const value = values[field.name];
+    const conditionalOptions = field.conditionalOptions
+      ? field.conditionalOptions.values[textInputValue(values[field.conditionalOptions.sourceField])]
+      : undefined;
+
+    if (conditionalOptions?.length) {
+      const selectOptions = optionsWithCurrentValue(conditionalOptions, value);
+
+      return (
+        <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
+          <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          <Select value={textInputValue(value)} onValueChange={(nextValue) => setFieldValue(field.name, nextValue)}>
+            <SelectTrigger id={id} className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {selectOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {field.description ? <FieldDescription>{field.description}</FieldDescription> : null}
+        </Field>
+      );
+    }
 
     if (field.type === "textarea") {
       return (
@@ -370,6 +409,8 @@ export function AdminCrudTools({
     }
 
     if (field.type === "select") {
+      const selectOptions = optionsWithCurrentValue(field.options ?? [], value);
+
       return (
         <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
           <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
@@ -378,7 +419,7 @@ export function AdminCrudTools({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {(field.options ?? []).map((option) => (
+              {selectOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>

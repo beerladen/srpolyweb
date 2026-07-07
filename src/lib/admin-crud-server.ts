@@ -162,12 +162,13 @@ export function rowToAdminCrudRow(config: AdminCrudModuleConfig, row: RawCrudRow
 async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<AdminCrudModuleConfig> {
   const needsNewsCategories = config.fields.some((field) => field.optionsSource === "news_categories");
   const needsDocumentCategories = config.fields.some((field) => field.optionsSource === "document_categories");
+  const needsPersonnelGroups = config.fields.some((field) => field.optionsSource === "personnel_groups");
 
-  if (!needsNewsCategories && !needsDocumentCategories) {
+  if (!needsNewsCategories && !needsDocumentCategories && !needsPersonnelGroups) {
     return config;
   }
 
-  const [newsCategories, documentCategories] = await Promise.all([
+  const [newsCategories, documentCategories, personnelGroups] = await Promise.all([
     needsNewsCategories
       ? queryRows<{ id: number; name: string }>(
           "SELECT id, name FROM categories WHERE type = 'news' AND status = 'active' ORDER BY sort_order, id"
@@ -176,6 +177,11 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
     needsDocumentCategories
       ? queryRows<{ id: number; name: string }>(
           "SELECT id, name FROM categories WHERE type = 'document' AND status = 'active' ORDER BY sort_order, id"
+        )
+      : Promise.resolve(null),
+    needsPersonnelGroups
+      ? queryRows<{ id: number; name: string }>(
+          "SELECT id, name FROM categories WHERE type = 'personnel_group' AND status = 'active' ORDER BY sort_order, id"
         )
       : Promise.resolve(null),
   ]);
@@ -190,6 +196,17 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
     value: String(category.id),
     label: category.name,
   }));
+  const fallbackPersonnelGroups = [
+    { id: 0, name: "ผู้บริหาร" },
+    { id: 0, name: "ข้าราชการครู" },
+    { id: 0, name: "พนักงานราชการ" },
+    { id: 0, name: "ครูจ้างสอน/ผู้ชำนาญการ" },
+    { id: 0, name: "เจ้าหน้าที่/ลูกจ้าง" },
+  ];
+  const personnelGroupOptions = (personnelGroups?.length ? personnelGroups : fallbackPersonnelGroups).map((category) => ({
+    value: category.name,
+    label: category.name,
+  }));
 
   return {
     ...config,
@@ -202,7 +219,13 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
               options: documentOptions,
               defaultValue: field.defaultValue ?? documentOptions[0]?.value ?? "",
             }
-        : field
+        : field.optionsSource === "personnel_groups"
+          ? {
+              ...field,
+              options: personnelGroupOptions,
+              defaultValue: field.defaultValue ?? personnelGroupOptions[0]?.value ?? "",
+            }
+          : field
     ),
   };
 }

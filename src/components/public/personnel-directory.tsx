@@ -88,9 +88,30 @@ function initialText(name: string): string {
 }
 
 function personnelCategory(profile: PersonnelDirectoryProfile): string {
+  const section = normalize(profile.section_title);
   const combined = normalize(
     [profile.section_title, profile.committee_role, profile.position_title, profile.department].filter(Boolean).join(" ")
   );
+
+  if (section.includes("ข้าราชการครู")) {
+    return "teacher";
+  }
+
+  if (section.includes("พนักงานราชการ")) {
+    return "employee";
+  }
+
+  if (section.includes("ผู้บริหาร")) {
+    return "executive";
+  }
+
+  if (section.includes("ครูจ้างสอน") || section.includes("ผู้ชำนาญการ")) {
+    return "teacher";
+  }
+
+  if (section.includes("เจ้าหน้าที่") || section.includes("ลูกจ้าง")) {
+    return "staff";
+  }
 
   if (combined.includes("ผู้บริหาร") || combined.includes("ผู้อำนวยการ") || combined.includes("รองผู้อำนวยการ")) {
     return "executive";

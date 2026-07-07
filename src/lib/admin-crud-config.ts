@@ -35,7 +35,11 @@ export type AdminCrudField = {
   sourceField?: string;
   uploadFolder?: "images" | "news" | "personnel" | "documents";
   uploadHint?: string;
-  optionsSource?: "news_categories" | "document_categories";
+  optionsSource?: "news_categories" | "document_categories" | "personnel_groups";
+  conditionalOptions?: {
+    sourceField: string;
+    values: Record<string, AdminCrudOption[]>;
+  };
 };
 
 export type AdminCrudModuleConfig = {
@@ -99,6 +103,16 @@ const commonActiveField: AdminCrudField = {
   defaultValue: "active",
   options: activeStatusOptions,
 };
+
+const teacherPositionOptions: AdminCrudOption[] = [
+  { value: "ผู้อำนวยการ", label: "ผู้อำนวยการ" },
+  { value: "รองผู้อำนวยการ", label: "รองผู้อำนวยการ" },
+  { value: "ครูผู้ช่วย", label: "ครูผู้ช่วย" },
+  { value: "ครู คศ.1", label: "ครู คศ.1" },
+  { value: "ครูชำนาญการ", label: "ครูชำนาญการ" },
+  { value: "ครูชำนาญการพิเศษ", label: "ครูชำนาญการพิเศษ" },
+  { value: "ครูเชี่ยวชาญ", label: "ครูเชี่ยวชาญ" },
+];
 
 export const adminCrudConfigs: AdminCrudModuleConfig[] = [
   {
@@ -353,6 +367,34 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     ],
   },
   {
+    key: "personnel_groups",
+    label: "กลุ่มบุคลากร",
+    table: "categories",
+    permission: "personnel",
+    titleField: "name",
+    descriptionField: "description",
+    categoryField: "slug",
+    statusField: "status",
+    hrefFallback: "/content/personnel-data",
+    orderBy: "WHERE type = 'personnel_group' ORDER BY sort_order, id",
+    adminOrderBy: "WHERE type = 'personnel_group' ORDER BY sort_order, id",
+    fields: [
+      { name: "name", label: "ชื่อกลุ่มบุคลากร", type: "text", required: true, placeholder: "ข้าราชการครู" },
+      { name: "slug", label: "รหัสกลุ่ม", type: "text", required: true, hidden: true, autoGenerate: "slug", sourceField: "name", placeholder: "civil-teachers" },
+      {
+        name: "type",
+        label: "ชนิดหมวด",
+        type: "select",
+        hidden: true,
+        defaultValue: "personnel_group",
+        options: [{ value: "personnel_group", label: "กลุ่มบุคลากร" }],
+      },
+      { name: "description", label: "คำอธิบาย", type: "textarea", span: "full" },
+      { name: "sort_order", label: "ลำดับ", type: "number", defaultValue: 0 },
+      commonActiveField,
+    ],
+  },
+  {
     key: "personnel_profiles",
     label: "บุคลากร",
     table: "personnel_profiles",
@@ -370,9 +412,30 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     updatedAt: true,
     fields: [
       { name: "page_slug", label: "หน้าที่แสดงผล", type: "text", required: true, defaultValue: "personnel-data", hidden: true, placeholder: "personnel-data" },
-      { name: "section_title", label: "หัวข้อกลุ่ม", type: "text", placeholder: "ผู้บริหาร" },
+      {
+        name: "section_title",
+        label: "กลุ่มบุคลากร",
+        type: "select",
+        required: true,
+        defaultValue: "ข้าราชการครู",
+        optionsSource: "personnel_groups",
+        description: "เพิ่ม แก้ไข หรือลำดับกลุ่มได้ที่เมนู กลุ่มบุคลากร",
+      },
       { name: "full_name", label: "ชื่อ-สกุล", type: "text", required: true },
-      { name: "position_title", label: "ตำแหน่ง", type: "textarea", required: true, span: "full" },
+      {
+        name: "position_title",
+        label: "ตำแหน่ง / ระดับ",
+        type: "textarea",
+        required: true,
+        span: "full",
+        conditionalOptions: {
+          sourceField: "section_title",
+          values: {
+            ข้าราชการครู: teacherPositionOptions,
+          },
+        },
+        description: "เมื่อเลือกกลุ่มข้าราชการครู ระบบจะแสดงตำแหน่งมาตรฐานให้เลือก ส่วนกลุ่มอื่นยังพิมพ์ตำแหน่งได้ตามจริง",
+      },
       { name: "department", label: "ฝ่าย / แผนก", type: "text" },
       { name: "committee_role", label: "บทบาทในคณะกรรมการ", type: "text", optionalColumn: true, placeholder: "ประธานกรรมการ / กรรมการ / เลขานุการ" },
       { name: "contact_phone", label: "เบอร์โทรติดต่อ", type: "text", optionalColumn: true, placeholder: "044-514414 ต่อ ..." },
