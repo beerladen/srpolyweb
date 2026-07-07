@@ -407,7 +407,11 @@ export function PersonnelDirectory({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge className={`border-0 ${category.chip}`}>{category.label}</Badge>
-                        {profile.committee_role ? <Badge variant="outline">{profile.committee_role}</Badge> : null}
+                        {profile.committee_role ? (
+                          <Badge variant="outline" className="max-w-full whitespace-normal text-left leading-5">
+                            {profile.committee_role}
+                          </Badge>
+                        ) : null}
                       </div>
                       <h3 className="mt-2 line-clamp-1 text-lg font-bold text-slate-950">{profile.full_name}</h3>
                       <p className="mt-1 line-clamp-2 text-sm leading-6 text-slate-600">{profile.position_title}</p>

@@ -672,7 +672,7 @@ export default async function ContentPage({
                           <div className={`flex flex-1 flex-col ${isFeatured ? "justify-center text-center md:min-h-[300px] md:text-left" : "pt-4 text-center"}`}>
                             <div className="min-w-0">
                               {person.committee_role ? (
-                                <Badge variant="outline" className={`mb-2 w-fit ${isFeatured ? "mx-auto md:mx-0" : "mx-auto"}`}>
+                                <Badge variant="outline" className={`mb-2 max-w-full whitespace-normal text-center leading-5 ${isFeatured ? "mx-auto md:mx-0" : "mx-auto"}`}>
                                   {person.committee_role}
                                 </Badge>
                               ) : null}

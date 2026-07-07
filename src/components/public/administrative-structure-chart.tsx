@@ -408,9 +408,9 @@ function DivisionCard({
   const secondaryDuties = splitItems(unit.secondary_duties_text);
 
   return (
-    <article className={`overflow-hidden rounded-lg border bg-white shadow-lg shadow-blue-950/5 ${theme.border} ${wide ? "lg:col-span-2" : ""}`}>
+    <article className={`overflow-hidden rounded-lg border bg-white shadow-lg shadow-blue-950/5 ${theme.border} ${wide ? "lg:col-span-2 xl:col-span-1" : ""}`}>
       <div className={`bg-gradient-to-r ${theme.header} px-4 py-3 text-white`}>
-        <div className={`flex items-center gap-3 ${wide ? "justify-center text-center md:justify-start md:text-left" : ""}`}>
+        <div className={`flex gap-3 ${wide ? "items-center justify-center text-center md:justify-start md:text-left" : "flex-col items-start"}`}>
           <span className="flex size-14 shrink-0 items-center justify-center rounded-full bg-white/95 text-slate-900 shadow-sm ring-1 ring-white/70">
             <UnitIcon unit={unit} />
           </span>
@@ -487,7 +487,7 @@ export function AdministrativeStructureChart({
 
   return (
     <section className="overflow-hidden border-y border-blue-100 bg-[linear-gradient(135deg,#f7fcff_0%,#ffffff_48%,#eef7ff_100%)] shadow-sm shadow-blue-950/5">
-      <div className="relative mx-auto max-w-[1580px] px-4 py-8 md:px-8">
+      <div className="relative mx-auto max-w-7xl px-4 py-8 md:px-6">
         <div className="relative z-10 flex flex-col gap-4 text-center">
           <div>
             <h2 className="text-3xl font-extrabold tracking-normal text-blue-950 md:text-5xl">
@@ -504,7 +504,7 @@ export function AdministrativeStructureChart({
             {pageSummary ? <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">{pageSummary}</p> : null}
           </div>
           {canManageStructure && config ? (
-            <div className="flex justify-center lg:absolute lg:right-0 lg:top-0">
+            <div className="flex justify-center">
               <AdminCrudCreateButton
                 user={user}
                 permission={config.permission}
@@ -520,7 +520,7 @@ export function AdministrativeStructureChart({
           ) : null}
         </div>
 
-        <div className="relative z-10 mx-auto mt-8 max-w-[1480px]">
+        <div className="relative z-10 mx-auto mt-8 max-w-full">
           <div className="relative grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(430px,520px)_minmax(280px,340px)_minmax(0,1fr)] lg:items-center">
             <div className="hidden lg:block" />
             <article className="relative mx-auto w-full max-w-xl rounded-lg border border-blue-300 bg-gradient-to-r from-blue-800 to-blue-600 p-5 text-white shadow-xl shadow-blue-950/15">
@@ -573,7 +573,7 @@ export function AdministrativeStructureChart({
             </div>
           ) : null}
 
-          <div className="mt-1 grid gap-5 lg:grid-cols-5">
+          <div className="mt-1 grid gap-5 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(390px,1.55fr)]">
             {divisions.map((unit) => {
               const wide = Boolean(unit.secondary_title || splitItems(unit.secondary_duties_text).length);
 
