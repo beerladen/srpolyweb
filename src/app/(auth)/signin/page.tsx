@@ -87,6 +87,11 @@ export default function SignInPage() {
                 autoComplete="current-password"
                 className="h-11 bg-white"
               />
+              <div className="flex justify-end">
+                <Link href="/forgot-password" className="text-sm font-semibold text-blue-700 hover:text-blue-900">
+                  ลืมรหัสผ่าน?
+                </Link>
+              </div>
             </Field>
           </FieldGroup>
 

@@ -38,12 +38,13 @@ import { showAppToast } from "@/components/ui/app-toast";
 import { apiPath } from "@/lib/base-path";
 import { permissionCatalogKeys, permissionDescription, permissionLabel } from "@/lib/permissions";
 import type { AdminUser } from "@/lib/admin-auth";
-import type { ManagedAdminRole, ManagedAdminUser } from "@/lib/admin-user-management";
+import type { ManagedAdminRole, ManagedAdminUser, PasswordResetRequest } from "@/lib/admin-user-management";
 
 type AdminUsersManagerProps = {
   users: ManagedAdminUser[];
   roles: ManagedAdminRole[];
   currentUser: AdminUser;
+  passwordResetRequests: PasswordResetRequest[];
 };
 
 type UserFormState = {
@@ -62,6 +63,14 @@ type RoleFormState = {
   id?: number;
   roleName: string;
   permissions: string[];
+};
+
+type ResetPasswordFormState = {
+  userId: number;
+  userName: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
 };
 
 type ApiResult<T> = {
@@ -105,6 +114,14 @@ const emptyUserForm: UserFormState = {
 const emptyRoleForm: RoleFormState = {
   roleName: "",
   permissions: [],
+};
+
+const emptyResetPasswordForm: ResetPasswordFormState = {
+  userId: 0,
+  userName: "",
+  email: "",
+  password: "",
+  confirmPassword: "",
 };
 
 function statusLabel(status: string) {
@@ -240,18 +257,59 @@ async function readApi<T>(response: Response): Promise<ApiResult<T>> {
   return data;
 }
 
-export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManagerProps) {
+function formatDateTimeText(value: string | null) {
+  if (!value) {
+    return "-";
+  }
+
+  return new Intl.DateTimeFormat("th-TH", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(new Date(value));
+}
+
+function generateTemporaryPassword() {
+  const characters = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const symbols = "!@#$%";
+  const values = new Uint32Array(10);
+  crypto.getRandomValues(values);
+  const core = Array.from(values, (value) => characters[value % characters.length]).join("");
+
+  return `Sr${core}${symbols[values[0] % symbols.length]}${new Date().getFullYear()}`;
+}
+
+export function AdminUsersManager({ users, roles, currentUser, passwordResetRequests }: AdminUsersManagerProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [userDialogOpen, setUserDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const [userForm, setUserForm] = useState<UserFormState>(emptyUserForm);
   const [roleForm, setRoleForm] = useState<RoleFormState>(emptyRoleForm);
+  const [resetPasswordForm, setResetPasswordForm] = useState<ResetPasswordFormState>(emptyResetPasswordForm);
   const [message, setMessage] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string | null>(null);
   const activeUsers = users.filter((user) => user.status === "active");
   const inactiveUsers = users.filter((user) => user.status !== "active");
   const superAdmins = users.filter((user) => user.status === "active" && user.effectivePermissions.includes("*"));
+  const pendingResetRequests = passwordResetRequests.filter((request) => request.status === "pending");
+  const currentUserDisplay = `${currentUser.name} (${currentUser.roleName})`;
+  const usersById = useMemo(() => new Map(users.map((user) => [user.id, user])), [users]);
+  const usersByIdentifier = useMemo(() => {
+    const map = new Map<string, ManagedAdminUser>();
+
+    users.forEach((user) => {
+      const email = user.email.toLowerCase();
+      map.set(email, user);
+      map.set(email.split("@")[0], user);
+    });
+
+    return map;
+  }, [users]);
+  const resetRequestsWithUsers = pendingResetRequests.map((request) => ({
+    request,
+    user: request.userId ? usersById.get(request.userId) : usersByIdentifier.get(request.identifier.toLowerCase()),
+  }));
   const selectedRole = roles.find((role) => String(role.id) === userForm.roleId) ?? null;
   const selectedRolePermissions = selectedRole?.permissions ?? [];
   const userFormTitle = userForm.id ? "อัปเดตบัญชีผู้ใช้" : "เพิ่มบัญชีผู้ใช้";
@@ -281,6 +339,27 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
       permissions: normalizePermissionList(user.directPermissions),
     });
     setUserDialogOpen(true);
+  }
+
+  function openResetPassword(user: ManagedAdminUser, initialPassword = "") {
+    setMessage(null);
+    setResetPasswordForm({
+      userId: user.id,
+      userName: user.name,
+      email: user.email,
+      password: initialPassword,
+      confirmPassword: initialPassword,
+    });
+    setResetDialogOpen(true);
+  }
+
+  function fillTemporaryPassword() {
+    const temporaryPassword = generateTemporaryPassword();
+    setResetPasswordForm((form) => ({
+      ...form,
+      password: temporaryPassword,
+      confirmPassword: temporaryPassword,
+    }));
   }
 
   function openCreateRole() {
@@ -331,6 +410,49 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
       const errorMessage = error instanceof Error ? error.message : "บันทึกผู้ใช้ไม่สำเร็จ";
       setMessage(errorMessage);
       showAppToast({ type: "error", title: "บันทึกผู้ใช้ไม่สำเร็จ", message: errorMessage });
+    } finally {
+      setSavingKey(null);
+    }
+  }
+
+  async function savePasswordReset() {
+    if (!resetPasswordForm.userId) {
+      return;
+    }
+
+    if (resetPasswordForm.password.length < 6) {
+      setMessage("รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร");
+      return;
+    }
+
+    if (resetPasswordForm.password !== resetPasswordForm.confirmPassword) {
+      setMessage("รหัสผ่านใหม่และช่องยืนยันไม่ตรงกัน");
+      return;
+    }
+
+    setSavingKey("reset-password");
+    setMessage(null);
+
+    try {
+      await readApi<ManagedAdminUser>(
+        await fetch(apiPath(`/api/admin/users/${resetPasswordForm.userId}/password`), {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: resetPasswordForm.password }),
+        })
+      );
+      showAppToast({
+        type: "success",
+        title: "รีเซ็ตรหัสผ่านสำเร็จ",
+        message: `อัปเดตรหัสผ่านของ ${resetPasswordForm.userName} เรียบร้อยแล้ว`,
+      });
+      setResetDialogOpen(false);
+      setResetPasswordForm(emptyResetPasswordForm);
+      refreshPage();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "รีเซ็ตรหัสผ่านไม่สำเร็จ";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "รีเซ็ตรหัสผ่านไม่สำเร็จ", message: errorMessage });
     } finally {
       setSavingKey(null);
     }
@@ -436,6 +558,9 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
               เพิ่ม แก้ไข ปิดใช้งาน รีเซ็ตรหัสผ่าน และกำหนดสิทธิ์ตามบทบาทหรือเฉพาะรายบัญชีได้จากหน้านี้
             </p>
+            <p className="mt-1 text-xs font-semibold text-blue-700">
+              ผู้ดูแลปัจจุบัน: {currentUserDisplay}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="outline" onClick={openCreateRole}>
@@ -473,6 +598,58 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
           })}
         </div>
       </section>
+
+      {resetRequestsWithUsers.length ? (
+        <Card className="border-amber-200 bg-amber-50/60 shadow-sm shadow-amber-950/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-amber-950">
+              <KeyRound className="size-5" />
+              คำขอรีเซ็ตรหัสผ่าน
+            </CardTitle>
+            <CardDescription>
+              ผู้ใช้ที่ลืมรหัสผ่านจะส่งคำขอมาที่นี่ ผู้ดูแลสามารถเปิดบัญชีที่ตรงกันและตั้งรหัสผ่านใหม่ได้ทันที
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {resetRequestsWithUsers.map(({ request, user }) => (
+              <div key={request.id} className="rounded-lg border border-amber-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-bold text-slate-950">{request.identifier}</p>
+                    <p className="mt-1 text-xs text-slate-500">ส่งคำขอเมื่อ {formatDateTimeText(request.createdAt)}</p>
+                  </div>
+                  <Badge variant={user ? "secondary" : "outline"}>{user ? "พบบัญชี" : "รอตรวจสอบ"}</Badge>
+                </div>
+                {request.requesterNote ? (
+                  <p className="mt-3 line-clamp-2 rounded-md bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-950">
+                    {request.requesterNote}
+                  </p>
+                ) : null}
+                <div className="mt-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm text-slate-600">
+                  {user ? (
+                    <>
+                      <span className="block font-semibold text-slate-950">{user.name}</span>
+                      <span className="block text-xs">{user.email}</span>
+                    </>
+                  ) : (
+                    "ยังไม่พบบัญชีที่ตรงกัน ตรวจสอบชื่อผู้ใช้หรืออีเมลก่อนรีเซ็ต"
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  className="mt-3 w-full"
+                  variant={user ? "default" : "outline"}
+                  disabled={!user}
+                  onClick={() => user && openResetPassword(user)}
+                >
+                  <KeyRound data-icon="inline-start" />
+                  รีเซ็ตรหัสผ่าน
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
         <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
@@ -513,6 +690,10 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
                           <Button type="button" variant="outline" size="sm" onClick={() => openEditUser(user)}>
                             <Pencil data-icon="inline-start" />
                             แก้ไข
+                          </Button>
+                          <Button type="button" variant="outline" size="sm" onClick={() => openResetPassword(user)}>
+                            <KeyRound data-icon="inline-start" />
+                            รีเซ็ต
                           </Button>
                           <Button
                             type="button"
@@ -713,6 +894,63 @@ export function AdminUsersManager({ users, roles, currentUser }: AdminUsersManag
             </Button>
             <Button type="button" disabled={savingKey === "user"} onClick={saveUser}>
               {savingKey === "user" ? "กำลังบันทึก..." : userForm.id ? "อัปเดตข้อมูล" : "สร้างบัญชี"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="size-5 text-blue-700" />
+              รีเซ็ตรหัสผ่าน
+            </DialogTitle>
+            <DialogDescription>
+              ตั้งรหัสผ่านใหม่ให้บัญชีนี้ ระบบจะบันทึกเป็นรหัสเข้ารหัสและปิดคำขอรีเซ็ตที่เกี่ยวข้องให้อัตโนมัติ
+            </DialogDescription>
+          </DialogHeader>
+
+          <FieldGroup className="gap-4">
+            <div className="rounded-lg border border-blue-100 bg-blue-50/60 p-4">
+              <p className="font-bold text-blue-950">{resetPasswordForm.userName}</p>
+              <p className="mt-1 text-sm text-blue-700">{resetPasswordForm.email}</p>
+            </div>
+            <Field>
+              <FieldLabel>รหัสผ่านใหม่</FieldLabel>
+              <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                <Input
+                  type="text"
+                  value={resetPasswordForm.password}
+                  onChange={(event) => setResetPasswordForm((form) => ({ ...form, password: event.target.value }))}
+                  placeholder="อย่างน้อย 6 ตัวอักษร"
+                />
+                <Button type="button" variant="outline" onClick={fillTemporaryPassword}>
+                  สร้างรหัสชั่วคราว
+                </Button>
+              </div>
+              <FieldDescription>
+                หากสร้างรหัสชั่วคราว ระบบจะเติมช่องยืนยันให้ทันที ผู้ดูแลสามารถคัดลอกไปแจ้งผู้ใช้ได้
+              </FieldDescription>
+            </Field>
+            <Field>
+              <FieldLabel>ยืนยันรหัสผ่านใหม่</FieldLabel>
+              <Input
+                type="password"
+                value={resetPasswordForm.confirmPassword}
+                onChange={(event) => setResetPasswordForm((form) => ({ ...form, confirmPassword: event.target.value }))}
+              />
+            </Field>
+          </FieldGroup>
+
+          {message ? <p className="text-sm text-red-600">{message}</p> : null}
+
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setResetDialogOpen(false)}>
+              ยกเลิก
+            </Button>
+            <Button type="button" disabled={savingKey === "reset-password"} onClick={savePasswordReset}>
+              {savingKey === "reset-password" ? "กำลังรีเซ็ต..." : "รีเซ็ตรหัสผ่าน"}
             </Button>
           </DialogFooter>
         </DialogContent>

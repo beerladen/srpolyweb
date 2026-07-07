@@ -16,6 +16,20 @@ export type ManagedAdminUser = AdminUser & {
   updatedAt?: string | null;
 };
 
+export type PasswordResetRequest = {
+  id: number;
+  identifier: string;
+  requestedEmail: string | null;
+  requesterNote: string | null;
+  status: string;
+  userId: number | null;
+  userName: string | null;
+  userEmail: string | null;
+  handledByName: string | null;
+  createdAt: string | null;
+  handledAt: string | null;
+};
+
 export type UserMutationInput = {
   name?: unknown;
   email?: unknown;
@@ -30,6 +44,12 @@ export type UserMutationInput = {
 export type RoleMutationInput = {
   roleName?: unknown;
   permissions?: unknown;
+};
+
+export type PasswordResetMutationInput = {
+  identifier?: unknown;
+  note?: unknown;
+  password?: unknown;
 };
 
 export type MutationResult<T> =
@@ -58,6 +78,26 @@ type RawManagedUser = {
   updated_at: Date | string | null;
 };
 
+type RawPasswordResetRequest = {
+  id: number;
+  identifier: string;
+  requested_email: string | null;
+  requester_note: string | null;
+  status: string;
+  user_id: number | null;
+  user_name: string | null;
+  user_email: string | null;
+  handled_by_name: string | null;
+  created_at: Date | string | null;
+  handled_at: Date | string | null;
+};
+
+type RawUserIdentity = {
+  id: number;
+  name: string;
+  email: string;
+};
+
 const statusValues = new Set(["active", "inactive"]);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -71,6 +111,10 @@ function nullableString(value: unknown): string | null {
 }
 
 function normalizeEmail(value: unknown): string {
+  return stringValue(value).toLowerCase();
+}
+
+function normalizeIdentifier(value: unknown): string {
   return stringValue(value).toLowerCase();
 }
 
@@ -206,6 +250,40 @@ async function findUser(userId: number): Promise<ManagedAdminUser | null> {
   return rows?.[0] ? userFromRow(rows[0]) : null;
 }
 
+async function findUserIdentity(identifier: string): Promise<RawUserIdentity | null> {
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+
+  if (!normalizedIdentifier) {
+    return null;
+  }
+
+  const rows = await queryRows<RawUserIdentity>(
+    `SELECT id, name, email
+     FROM users
+     WHERE LOWER(email) = ? OR LOWER(SUBSTRING_INDEX(email, '@', 1)) = ?
+     LIMIT 1`,
+    [normalizedIdentifier, normalizedIdentifier]
+  );
+
+  return rows?.[0] ?? null;
+}
+
+function resetRequestFromRow(row: RawPasswordResetRequest): PasswordResetRequest {
+  return {
+    id: row.id,
+    identifier: row.identifier,
+    requestedEmail: row.requested_email,
+    requesterNote: row.requester_note,
+    status: row.status,
+    userId: row.user_id,
+    userName: row.user_name,
+    userEmail: row.user_email,
+    handledByName: row.handled_by_name,
+    createdAt: formatDateTime(row.created_at),
+    handledAt: formatDateTime(row.handled_at),
+  };
+}
+
 async function emailExists(email: string, exceptUserId?: number): Promise<boolean> {
   const rows = await queryRows<{ id: number }>(
     `SELECT id FROM users WHERE LOWER(email) = ? ${exceptUserId ? "AND id <> ?" : ""} LIMIT 1`,
@@ -271,6 +349,60 @@ export async function getManagedAdminRoles(): Promise<ManagedAdminRole[]> {
 
 export async function getManagedAdminUsers(): Promise<ManagedAdminUser[]> {
   return (await getRawUsers()).map(userFromRow);
+}
+
+export async function getPasswordResetRequests(): Promise<PasswordResetRequest[]> {
+  const rows = await queryRows<RawPasswordResetRequest>(
+    `SELECT pr.id, pr.identifier, pr.requested_email, pr.requester_note, pr.status,
+            pr.user_id, pr.created_at, pr.handled_at,
+            u.name AS user_name, u.email AS user_email,
+            handler.name AS handled_by_name
+     FROM password_reset_requests pr
+     LEFT JOIN users u ON u.id = pr.user_id
+     LEFT JOIN users handler ON handler.id = pr.handled_by
+     ORDER BY FIELD(pr.status, 'pending', 'handled', 'cancelled'), pr.created_at DESC, pr.id DESC
+     LIMIT 40`
+  );
+
+  return rows?.map(resetRequestFromRow) ?? [];
+}
+
+export async function createPasswordResetRequest(
+  input: PasswordResetMutationInput
+): Promise<MutationResult<{ id?: number }>> {
+  const identifier = normalizeIdentifier(input.identifier);
+  const note = nullableString(input.note);
+
+  if (identifier.length < 2) {
+    return { ok: false, status: 400, message: "กรุณาระบุชื่อผู้ใช้หรืออีเมล" };
+  }
+
+  const user = await findUserIdentity(identifier);
+  const pendingRows = await queryRows<{ id: number }>(
+    `SELECT id
+     FROM password_reset_requests
+     WHERE status = 'pending'
+       AND (LOWER(identifier) = ? OR (? IS NOT NULL AND user_id = ?))
+     ORDER BY id DESC
+     LIMIT 1`,
+    [identifier, user?.id ?? null, user?.id ?? null]
+  );
+
+  if (pendingRows?.[0]) {
+    return { ok: true, item: { id: pendingRows[0].id } };
+  }
+
+  const created = await executeSqlResult(
+    `INSERT INTO password_reset_requests (identifier, requested_email, requester_note, user_id, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())`,
+    [identifier, user?.email ?? null, note, user?.id ?? null]
+  );
+
+  if (!created) {
+    return { ok: false, status: 503, message: "ยังส่งคำขอรีเซ็ตรหัสผ่านไม่ได้" };
+  }
+
+  return { ok: true, item: { id: created.insertId } };
 }
 
 export async function createManagedAdminUser(
@@ -424,6 +556,49 @@ export async function updateManagedAdminUser(
   const item = await findUser(userId);
 
   return item ? { ok: true, item } : { ok: false, status: 404, message: "ไม่พบบัญชีผู้ใช้หลังบันทึก" };
+}
+
+export async function resetManagedAdminUserPassword(
+  userId: number,
+  input: PasswordResetMutationInput,
+  actor: AdminUser
+): Promise<MutationResult<ManagedAdminUser>> {
+  const existing = await findUser(userId);
+  const password = stringValue(input.password);
+
+  if (!existing) {
+    return { ok: false, status: 404, message: "ไม่พบบัญชีผู้ใช้" };
+  }
+
+  if (password.length < 6) {
+    return { ok: false, status: 400, message: "รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร" };
+  }
+
+  if (existing.effectivePermissions.includes("*") && actor.id !== userId && !actor.effectivePermissions.includes("*")) {
+    return { ok: false, status: 403, message: "เฉพาะ Super Admin เท่านั้นที่รีเซ็ตรหัสผ่านบัญชี Super Admin ได้" };
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+  const saved = await executeSqlResult(
+    "UPDATE users SET password = ?, updated_at = NOW() WHERE id = ?",
+    [passwordHash, userId]
+  );
+
+  if (!saved) {
+    return { ok: false, status: 503, message: "ยังรีเซ็ตรหัสผ่านไม่ได้" };
+  }
+
+  await executeSqlResult(
+    `UPDATE password_reset_requests
+     SET status = 'handled', handled_by = ?, handled_at = NOW(), updated_at = NOW()
+     WHERE status = 'pending'
+       AND (user_id = ? OR LOWER(identifier) = ? OR LOWER(requested_email) = ?)`,
+    [actor.id, userId, existing.email.toLowerCase(), existing.email.toLowerCase()]
+  );
+
+  const item = await findUser(userId);
+
+  return item ? { ok: true, item } : { ok: false, status: 404, message: "รีเซ็ตแล้ว แต่ยังอ่านข้อมูลบัญชีกลับมาไม่ได้" };
 }
 
 export async function createManagedAdminRole(

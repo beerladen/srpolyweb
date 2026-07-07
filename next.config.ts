@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
       { source: "/feedback", destination: "/contact", permanent: false },
       { source: "/help", destination: "/contact", permanent: false },
       { source: "/signup", destination: "/signin", permanent: false },
-      { source: "/forgot-password", destination: "/signin", permanent: false },
       { source: "/terms", destination: "/about", permanent: false },
     ];
   },
