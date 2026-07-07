@@ -50,6 +50,9 @@ type AdminCrudToolsProps = {
   triggerVariant?: ButtonVariant;
   triggerSize?: ButtonSize;
   initialValues?: Record<string, AdminCrudValue>;
+  createDialogTitle?: string;
+  createDialogDescription?: string;
+  createSubmitLabel?: string;
 };
 
 type SavedItemResponse = {
@@ -126,6 +129,9 @@ export function AdminCrudTools({
   triggerVariant,
   triggerSize,
   initialValues,
+  createDialogTitle,
+  createDialogDescription,
+  createSubmitLabel,
 }: AdminCrudToolsProps) {
   const router = useRouter();
   const fieldId = useId();
@@ -654,9 +660,9 @@ export function AdminCrudTools({
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? `อัปเดตข้อมูล${moduleLabel}` : `เพิ่ม${moduleLabel}`}</DialogTitle>
+          <DialogTitle>{isEditing ? `อัปเดตข้อมูล${moduleLabel}` : createDialogTitle ?? `เพิ่ม${moduleLabel}`}</DialogTitle>
           <DialogDescription>
-            {isEditing ? row?.title : `สร้างรายการใหม่ใน${moduleLabel}`}
+            {isEditing ? row?.title : createDialogDescription ?? `สร้างรายการใหม่ใน${moduleLabel}`}
           </DialogDescription>
         </DialogHeader>
 
@@ -712,7 +718,7 @@ export function AdminCrudTools({
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
             <Save data-icon="inline-start" />
-            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดตข้อมูล" : "สร้างรายการ"}
+            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดตข้อมูล" : createSubmitLabel ?? "สร้างรายการ"}
           </Button>
         </DialogFooter>
       </DialogContent>

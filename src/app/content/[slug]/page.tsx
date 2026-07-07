@@ -24,6 +24,7 @@ import {
   PersonnelDirectory,
   type PersonnelDirectoryProfile,
 } from "@/components/public/personnel-directory";
+import { SchoolBoardChart } from "@/components/public/school-board-chart";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SiteShell } from "@/components/public/site-shell";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
@@ -359,6 +360,20 @@ export default async function ContentPage({
     };
   }
 
+  if (!page && slug === "school-management-board") {
+    page = {
+      id: -51,
+      slug: "school-management-board",
+      title: "คณะกรรมการสถานศึกษา",
+      summary: "โครงสร้างคณะกรรมการสถานศึกษาของวิทยาลัยสารพัดช่างสุรินทร์ พร้อมบทบาท หน้าที่ และข้อมูลประกอบการแต่งตั้ง",
+      body: "",
+      contentType: "committee",
+      navKey: "about",
+      status: "published",
+      href: "/content/school-management-board",
+    };
+  }
+
   if (!page) {
     notFound();
   }
@@ -367,7 +382,8 @@ export default async function ContentPage({
   const attachmentPath = publicAssetPath(page.attachmentPath);
   const personnelSummaryStats = personnelSummaryRows ?? [];
   const legalItems = legalRows ?? [];
-  const shouldRenderPersonnelCards = slug !== "personnel-data" && activePersonnelProfiles.length > 0 && Boolean(personnelLayout);
+  const shouldRenderSchoolBoardChart = slug === "school-management-board";
+  const shouldRenderPersonnelCards = slug !== "personnel-data" && !shouldRenderSchoolBoardChart && activePersonnelProfiles.length > 0 && Boolean(personnelLayout);
   const shouldShowInactivePersonnelTools =
     slug !== "personnel-data" && (inactivePersonnelProfiles.length > 0 || inactiveLayoutRows.length > 0);
   const shouldShowPersonnelBeforeBody =
@@ -410,14 +426,14 @@ export default async function ContentPage({
     <SiteShell active={page.navKey ?? "content"} settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
       <section
         className={
-          shouldRenderAdministrativeStructure
+          shouldRenderAdministrativeStructure || shouldRenderSchoolBoardChart
             ? "mx-auto flex w-full max-w-none flex-col gap-0 px-0 py-0"
             : shouldRenderPersonnelDirectory
               ? "mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6"
             : "mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 md:px-6"
         }
       >
-        {shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory ? null : (
+        {shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory || shouldRenderSchoolBoardChart ? null : (
           <SectionHeading
             title={page.title}
             description={page.summary}
@@ -551,9 +567,20 @@ export default async function ContentPage({
             config={administrativeStructureConfig}
             crudRows={administrativeStructureCrudRows}
             pageSummary={page.summary}
+            pageHref="/content/administrative-structure"
           />
         ) : null}
-        {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory ? null : (
+        {shouldRenderSchoolBoardChart ? (
+          <SchoolBoardChart
+            title={page.title}
+            summary={page.summary}
+            profiles={personnelSection.profiles}
+            user={adminUser}
+            config={personnelConfig}
+            crudRows={personnelRows}
+          />
+        ) : null}
+        {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory || shouldRenderSchoolBoardChart ? null : (
           <>
         <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
           <CardContent

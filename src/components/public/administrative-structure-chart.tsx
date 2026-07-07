@@ -42,6 +42,7 @@ type AdministrativeStructureChartProps = {
   config?: AdminCrudModuleConfig | null;
   crudRows?: AdminCrudRow[] | null;
   pageSummary?: string;
+  pageHref?: string;
 };
 
 type Theme = {
@@ -252,20 +253,24 @@ function UnitTools({
   unit,
   config,
   crudRowsById,
+  crudRowsByUnitKey,
   user,
   label = "จัดการ",
+  pageHref,
 }: {
   unit: AdministrativeStructureUnit;
   config?: AdminCrudModuleConfig | null;
   crudRowsById: Map<number, AdminCrudRow>;
+  crudRowsByUnitKey: Map<string, AdminCrudRow>;
   user?: AdminUser | null;
   label?: string;
+  pageHref?: string;
 }) {
   if (!config || !user || !canAccess(user.effectivePermissions, config.permission)) {
     return null;
   }
 
-  const row = unit.id > 0 ? crudRowsById.get(unit.id) : null;
+  const row = (unit.id > 0 ? crudRowsById.get(unit.id) : null) ?? crudRowsByUnitKey.get(unit.unit_key) ?? null;
 
   if (!row) {
     const initialValues: Record<string, AdminCrudValue> = {
@@ -296,8 +301,11 @@ function UnitTools({
         label={label}
         triggerSize="sm"
         adminHref="/admin/modules/administrative_structure"
-        afterCreateHref="/content/administrative-structure"
+        afterCreateHref={pageHref ?? "/content/administrative-structure"}
         initialValues={initialValues}
+        createDialogTitle={`บันทึกข้อมูล${config.label}`}
+        createDialogDescription={unit.title}
+        createSubmitLabel="บันทึกข้อมูล"
       />
     );
   }
@@ -310,12 +318,12 @@ function UnitTools({
       moduleLabel={config.label}
       fields={config.fields}
       row={row}
-      label={label}
-      triggerSize="sm"
-      adminHref="/admin/modules/administrative_structure"
-      afterDeleteHref="/admin/modules/administrative_structure"
-    />
-  );
+    label={label}
+    triggerSize="sm"
+    adminHref="/admin/modules/administrative_structure"
+    afterDeleteHref={pageHref ?? "/content/administrative-structure"}
+  />
+);
 }
 
 type DutyItem = {
@@ -382,14 +390,18 @@ function DivisionCard({
   unit,
   config,
   crudRowsById,
+  crudRowsByUnitKey,
   user,
   wide = false,
+  pageHref,
 }: {
   unit: AdministrativeStructureUnit;
   config?: AdminCrudModuleConfig | null;
   crudRowsById: Map<number, AdminCrudRow>;
+  crudRowsByUnitKey: Map<string, AdminCrudRow>;
   user?: AdminUser | null;
   wide?: boolean;
+  pageHref?: string;
 }) {
   const theme = unitTheme(unit);
   const duties = splitItems(unit.duties_text);
@@ -407,7 +419,7 @@ function DivisionCard({
             {unit.leader_name ? <p className="mt-0.5 text-sm font-semibold text-white/95">{unit.leader_name}</p> : null}
             {unit.leader_position ? <p className="mt-0.5 text-xs leading-5 text-white/80">{unit.leader_position}</p> : null}
           </div>
-          <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} />
+          <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} pageHref={pageHref} />
         </div>
       </div>
       <div className={`grid gap-4 p-4 ${theme.soft}`}>
@@ -416,7 +428,7 @@ function DivisionCard({
           <section className="rounded-lg border border-white/80 bg-white/60 p-3">
             <div className="mb-2 flex items-center justify-between gap-2">
               {unit.duties_title ? <h4 className={`text-sm font-bold ${theme.text}`}>{unit.duties_title}</h4> : <span />}
-              <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} label="แก้งาน" />
+              <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} label="แก้งาน" pageHref={pageHref} />
             </div>
             <DutyList items={duties} theme={theme} compact={wide} />
           </section>
@@ -424,7 +436,7 @@ function DivisionCard({
             <section className="rounded-lg border border-white/80 bg-white/60 p-3">
               <div className="mb-2 flex items-center justify-between gap-2">
                 {unit.secondary_title ? <h4 className={`text-sm font-bold ${theme.text}`}>{unit.secondary_title}</h4> : <span />}
-                <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} user={user} label="แก้งานรอง" />
+                <UnitTools unit={unit} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} label="แก้งานรอง" pageHref={pageHref} />
               </div>
               <DutyList items={secondaryDuties} theme={theme} compact={wide} />
             </section>
@@ -441,6 +453,7 @@ export function AdministrativeStructureChart({
   config,
   crudRows,
   pageSummary,
+  pageHref = "/content/administrative-structure",
 }: AdministrativeStructureChartProps) {
   const displayUnits = activeUnits(units);
   const year = displayUnits[0]?.academic_year ?? "2569";
@@ -449,6 +462,11 @@ export function AdministrativeStructureChart({
   const divisions = displayUnits.filter((unit) => unit.unit_type === "division").sort((a, b) => a.sort_order - b.sort_order);
   const inactiveUnits = units.filter((unit) => unit.status !== "active" && unit.status !== "published" && unit.status !== "1");
   const crudRowsById = new Map((crudRows ?? []).map((row) => [row.id, row]));
+  const crudRowsByUnitKey = new Map(
+    (crudRows ?? [])
+      .map((row) => [String(row.values.unit_key ?? ""), row] as const)
+      .filter(([unitKey]) => unitKey.length > 0)
+  );
   const canManageStructure = Boolean(user && config && canAccess(user.effectivePermissions, config.permission));
   const branchStops = divisions.map((unit, index) => {
     if (unit.secondary_title || splitItems(unit.secondary_duties_text).length) {
@@ -480,7 +498,7 @@ export function AdministrativeStructureChart({
               <Badge variant="outline" className="border-cyan-200 bg-white/90 px-4 py-1 text-base font-bold text-cyan-700">
                 ประจำปีการศึกษา {year}
               </Badge>
-              <UnitTools unit={director} config={config} crudRowsById={crudRowsById} user={user} label="แก้ปี" />
+              <UnitTools unit={director} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} label="แก้ปี" pageHref={pageHref} />
               <span className="hidden h-px w-28 bg-cyan-300 md:block" />
             </div>
             {pageSummary ? <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">{pageSummary}</p> : null}
@@ -495,7 +513,7 @@ export function AdministrativeStructureChart({
                 fields={config.fields}
                 label="เพิ่มหน่วยงานในโครงสร้าง"
                 adminHref="/admin/modules/administrative_structure"
-                afterCreateHref="/content/administrative-structure"
+                afterCreateHref={pageHref}
                 initialValues={addInitialValues}
               />
             </div>
@@ -516,7 +534,7 @@ export function AdministrativeStructureChart({
                   {director.leader_name ? <p className="mt-1 text-lg font-semibold text-white/95">{director.leader_name}</p> : null}
                   {director.leader_position ? <p className="mt-1 text-sm leading-6 text-blue-100">{director.leader_position}</p> : null}
                 </div>
-                <UnitTools unit={director} config={config} crudRowsById={crudRowsById} user={user} label="แก้กล่อง" />
+                <UnitTools unit={director} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} label="แก้กล่อง" pageHref={pageHref} />
               </div>
             </article>
 
@@ -532,7 +550,7 @@ export function AdministrativeStructureChart({
                     <h3 className="font-extrabold text-slate-950">{committee.title}</h3>
                     {committee.leader_position ? <p className="mt-1 text-xs leading-5 text-slate-500">{committee.leader_position}</p> : null}
                   </div>
-                  <UnitTools unit={committee} config={config} crudRowsById={crudRowsById} user={user} label="แก้กล่อง" />
+                  <UnitTools unit={committee} config={config} crudRowsById={crudRowsById} crudRowsByUnitKey={crudRowsByUnitKey} user={user} label="แก้กล่อง" pageHref={pageHref} />
                 </div>
               </article>
             ) : (
@@ -565,8 +583,10 @@ export function AdministrativeStructureChart({
                   unit={unit}
                   config={config}
                   crudRowsById={crudRowsById}
+                  crudRowsByUnitKey={crudRowsByUnitKey}
                   user={user}
                   wide={wide}
+                  pageHref={pageHref}
                 />
               );
             })}
