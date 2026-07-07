@@ -443,6 +443,12 @@ export function AdminCrudTools({
       return (
         <Field key={field.name} className={field.span === "full" ? "md:col-span-2" : undefined}>
           <FieldLabel htmlFor={id}>{field.label}</FieldLabel>
+          {field.uploadHint ? (
+            <div className="rounded-md border border-primary/15 bg-primary/5 px-3 py-2 text-xs leading-5 text-muted-foreground">
+              <span className="font-semibold text-foreground">คำแนะนำไฟล์: </span>
+              {field.uploadHint}
+            </div>
+          ) : null}
           <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
             <Input
               id={id}

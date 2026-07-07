@@ -3,6 +3,7 @@ import {
   ArrowRight,
   ClipboardList,
   Download,
+  FileCheck2,
   FileText,
   GraduationCap,
   Megaphone,
@@ -19,8 +20,10 @@ import { HomeNewsShowcase } from "@/components/public/home-news-showcase";
 import { SiteShell } from "@/components/public/site-shell";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
 import { getAdminCrudAvailableConfig, getAdminCrudRows } from "@/lib/admin-crud-server";
+import { withBasePath } from "@/lib/base-path";
 import { getDownloadCenterData } from "@/lib/document-data";
 import { publicAssetPath } from "@/lib/legacy-paths";
+import { getPlanCenterData } from "@/lib/plan-data";
 import { getSiteOverview, statusLabel, statusVariant, type CourseGroup } from "@/lib/site-data";
 
 function isExternalLink(href: string): boolean {
@@ -80,13 +83,14 @@ function buildDepartmentLinks(courseGroups: CourseGroup[]): DepartmentLink[] {
 }
 
 export default async function Home() {
-  const [overview, adminUser, siteBlockConfig, newsConfig, newsCategoryConfig, downloadData] = await Promise.all([
+  const [overview, adminUser, siteBlockConfig, newsConfig, newsCategoryConfig, downloadData, planData] = await Promise.all([
     getSiteOverview(),
     getSignedInAdminUser(),
     getAdminCrudAvailableConfig("site_blocks"),
     getAdminCrudAvailableConfig("news"),
     getAdminCrudAvailableConfig("news_categories"),
     getDownloadCenterData(),
+    getPlanCenterData(),
   ]);
   const [siteBlockRows, newsRows] = await Promise.all([
     siteBlockConfig ? getAdminCrudRows(siteBlockConfig) : Promise.resolve(null),
@@ -174,6 +178,9 @@ export default async function Home() {
       tone: "border-emerald-200 bg-emerald-50",
     },
   ];
+  const homePlanDocuments = planData.currentDocuments.length
+    ? planData.currentDocuments
+    : planData.documents.slice(0, 2);
 
   return (
     <SiteShell active="home" settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
@@ -524,6 +531,75 @@ export default async function Home() {
                   <ArrowRight data-icon="inline-end" />
                 </Link>
               </Button>
+            </div>
+          </div>
+
+          <div className="mt-4 rounded-lg border border-blue-100 bg-[linear-gradient(135deg,#f8fbff_0%,#ffffff_58%,#edf8ff_100%)] p-4 shadow-sm shadow-blue-950/5">
+            <div className="grid gap-4 lg:grid-cols-[280px_1fr_auto] lg:items-center">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="flex size-10 items-center justify-center rounded-md bg-blue-600 text-white shadow-xs">
+                    <FileCheck2 className="size-5" />
+                  </span>
+                  <h2 className="text-xl font-bold tracking-normal text-blue-950">แผนและรายงาน</h2>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  แผนพัฒนาและแผนปฏิบัติการฉบับปัจจุบัน พร้อมไฟล์ PDF ย้อนหลังตามปีงบประมาณ
+                </p>
+                <div className="mt-3">
+                  <AdminInlineTools
+                    user={adminUser}
+                    permission="plans"
+                    module="plans"
+                    label="จัดการ"
+                    className="[&_button]:h-9"
+                  />
+                </div>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {homePlanDocuments.slice(0, 2).map((document) => (
+                  <Link
+                    key={document.id}
+                    href={document.href}
+                    className="group flex min-h-24 items-start gap-3 rounded-md border border-blue-100 bg-white px-3 py-3 transition-colors hover:bg-sky-50"
+                  >
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700">
+                      <FileText className="size-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap gap-1.5">
+                        <Badge variant="outline" className="border-blue-100 bg-white text-blue-800">
+                          {document.reportType}
+                        </Badge>
+                        {document.fiscalYear ? <Badge variant="secondary">ปี {document.fiscalYear}</Badge> : null}
+                      </span>
+                      <strong className="mt-2 block line-clamp-2 text-sm leading-6 text-slate-950 group-hover:text-blue-700">
+                        {document.title}
+                      </strong>
+                      <span className="mt-1 block truncate text-xs text-slate-500">
+                        {document.department} · {document.downloadCount.toLocaleString("th-TH")} ดาวน์โหลด
+                      </span>
+                    </span>
+                    <ArrowRight className="mt-1 size-4 shrink-0 text-blue-700 transition-transform group-hover:translate-x-1" />
+                  </Link>
+                ))}
+              </div>
+              <div className="flex flex-col gap-2">
+                <Button asChild>
+                  <Link href="/plans">
+                    ดูแผนทั้งหมด
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+                {homePlanDocuments[0]?.downloadUrl ? (
+                  <Button asChild variant="outline" className="border-blue-200 bg-white">
+                    <a href={withBasePath(homePlanDocuments[0].downloadUrl)} target="_blank" rel="noreferrer">
+                      <Download data-icon="inline-start" />
+                      PDF ล่าสุด
+                    </a>
+                  </Button>
+                ) : null}
+              </div>
             </div>
           </div>
         </div>
