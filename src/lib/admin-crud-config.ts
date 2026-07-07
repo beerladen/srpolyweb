@@ -257,7 +257,7 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
       },
       { name: "image_alt", label: "คำอธิบายภาพ", type: "text", optionalColumn: true, placeholder: "เช่น ภาพประกาศวาระพิเศษ" },
       { name: "primary_label", label: "ข้อความปุ่มที่ 1", type: "text", defaultValue: "ดูรายละเอียด", optionalColumn: true },
-      { name: "primary_href", label: "ลิงก์ปุ่มที่ 1", type: "text", optionalColumn: true, placeholder: "/news หรือ https://..." },
+      { name: "primary_href", label: "ลิงก์ปุ่มที่ 1", type: "text", required: true, defaultValue: "/", optionalColumn: true, placeholder: "/news หรือ https://..." },
       {
         name: "primary_target",
         label: "การเปิดลิงก์ปุ่มที่ 1",
