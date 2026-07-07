@@ -63,11 +63,12 @@ type PersonnelDirectoryProps = {
 };
 
 const categoryMeta = [
-  { key: "all", label: "ทั้งหมด", icon: UsersRound, className: "bg-blue-600 text-white", chip: "bg-blue-50 text-blue-700" },
-  { key: "executive", label: "ผู้บริหาร", icon: UserCog, className: "bg-violet-600 text-white", chip: "bg-violet-50 text-violet-700" },
-  { key: "teacher", label: "ข้าราชการครู", icon: GraduationCap, className: "bg-emerald-600 text-white", chip: "bg-emerald-50 text-emerald-700" },
-  { key: "employee", label: "พนักงานราชการ", icon: BriefcaseBusiness, className: "bg-orange-500 text-white", chip: "bg-orange-50 text-orange-700" },
-  { key: "staff", label: "เจ้าหน้าที่", icon: UserRound, className: "bg-cyan-600 text-white", chip: "bg-cyan-50 text-cyan-700" },
+  { key: "all", label: "ทั้งหมด", icon: UsersRound, className: "bg-blue-600 text-white", chip: "bg-blue-50 text-blue-700", dot: "bg-blue-600", chartColor: "#2563eb" },
+  { key: "executive", label: "ผู้บริหาร", icon: UserCog, className: "bg-violet-600 text-white", chip: "bg-violet-50 text-violet-700", dot: "bg-violet-600", chartColor: "#7c3aed" },
+  { key: "teacher", label: "ข้าราชการครู", icon: GraduationCap, className: "bg-emerald-600 text-white", chip: "bg-emerald-50 text-emerald-700", dot: "bg-emerald-600", chartColor: "#16a34a" },
+  { key: "contract", label: "ครูจ้างสอน/ผู้ชำนาญการ", icon: GraduationCap, className: "bg-sky-600 text-white", chip: "bg-sky-50 text-sky-700", dot: "bg-sky-600", chartColor: "#0284c7" },
+  { key: "employee", label: "พนักงานราชการ", icon: BriefcaseBusiness, className: "bg-orange-500 text-white", chip: "bg-orange-50 text-orange-700", dot: "bg-orange-500", chartColor: "#f97316" },
+  { key: "staff", label: "เจ้าหน้าที่", icon: UserRound, className: "bg-cyan-600 text-white", chip: "bg-cyan-50 text-cyan-700", dot: "bg-cyan-600", chartColor: "#0891b2" },
 ];
 
 function firstValue(searchParams: SearchParams, key: string): string {
@@ -93,6 +94,10 @@ function personnelCategory(profile: PersonnelDirectoryProfile): string {
     [profile.section_title, profile.committee_role, profile.position_title, profile.department].filter(Boolean).join(" ")
   );
 
+  if (section.includes("ครูจ้างสอน") || section.includes("ผู้ชำนาญการ")) {
+    return "contract";
+  }
+
   if (section.includes("ข้าราชการครู")) {
     return "teacher";
   }
@@ -105,10 +110,6 @@ function personnelCategory(profile: PersonnelDirectoryProfile): string {
     return "executive";
   }
 
-  if (section.includes("ครูจ้างสอน") || section.includes("ผู้ชำนาญการ")) {
-    return "teacher";
-  }
-
   if (section.includes("เจ้าหน้าที่") || section.includes("ลูกจ้าง")) {
     return "staff";
   }
@@ -119,6 +120,10 @@ function personnelCategory(profile: PersonnelDirectoryProfile): string {
 
   if (combined.includes("พนักงานราชการ")) {
     return "employee";
+  }
+
+  if (combined.includes("ครูจ้างสอน") || combined.includes("ผู้ชำนาญการ")) {
+    return "contract";
   }
 
   if (combined.includes("ครู") || combined.includes("อาจารย์") || combined.includes("ข้าราชการครู")) {
@@ -146,7 +151,11 @@ function countCategory(
   }
 
   if (category === "teacher") {
-    return summaryCount(currentSummary, ["ข้าราชการครู", "ครู", "อาจารย์"]) || profileCount;
+    return summaryCount(currentSummary, ["ข้าราชการครู"]) || profileCount;
+  }
+
+  if (category === "contract") {
+    return summaryCount(currentSummary, ["ครูจ้างสอน", "ผู้ชำนาญการ"]) || profileCount;
   }
 
   if (category === "employee") {
@@ -179,6 +188,7 @@ function percent(value: number, total: number): number {
 
 function categorySectionLabel(category: string): string {
   if (category === "teacher") return "ข้าราชการครู";
+  if (category === "contract") return "ครูจ้างสอน/ผู้ชำนาญการ";
   if (category === "employee") return "พนักงานราชการ";
   if (category === "staff") return "เจ้าหน้าที่";
   if (category === "executive") return "ผู้บริหาร";
@@ -272,16 +282,18 @@ export function PersonnelDirectory({
     .sort((a, b) => b.count - a.count)
     .slice(0, 7);
   const maxDepartmentCount = Math.max(1, ...departmentStats.map((item) => item.count));
-  const cumulative = categoryStats.reduce<number[]>((points, item, index) => {
-    const previous = points[index - 1] ?? 0;
-    points.push(previous + percent(item.value, Math.max(1, categoryStats.reduce((sum, stat) => sum + stat.value, 0))));
-    return points;
-  }, []);
   const chartTotal = categoryStats.reduce((sum, item) => sum + item.value, 0);
+  let chartStart = 0;
+  const chartSegments = categoryStats.map((item) => {
+    const segmentSize = chartTotal > 0 ? (item.value / chartTotal) * 100 : 0;
+    const segment = `${item.chartColor} ${chartStart}% ${chartStart + segmentSize}%`;
+    chartStart += segmentSize;
+    return segment;
+  });
   const chartStyle =
     chartTotal > 0
       ? {
-          background: `conic-gradient(#7c3aed 0 ${cumulative[0]}%, #16a34a ${cumulative[0]}% ${cumulative[1]}%, #f97316 ${cumulative[1]}% ${cumulative[2]}%, #0891b2 ${cumulative[2]}% 100%)`,
+          background: `conic-gradient(${chartSegments.join(", ")})`,
         }
       : { background: "#e2e8f0" };
   const selectedSectionLabel = categorySectionLabel(selectedCategory);
@@ -300,7 +312,7 @@ export function PersonnelDirectory({
         </div>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         {[
           { ...categoryMeta[0], value: directoryTotal, note: currentSummary[0]?.context_note ?? "รวมจากข้อมูลบุคลากรและสรุปประจำปี" },
           ...categoryStats.map((item) => ({
@@ -552,7 +564,7 @@ export function PersonnelDirectory({
               <div className="grid gap-2 text-xs">
                 {categoryStats.map((item) => (
                   <div key={item.key} className="flex items-center gap-2">
-                    <span className={`size-2 rounded-full ${item.key === "executive" ? "bg-violet-600" : item.key === "teacher" ? "bg-emerald-600" : item.key === "employee" ? "bg-orange-500" : "bg-cyan-600"}`} />
+                    <span className={`size-2 rounded-full ${item.dot}`} />
                     <span className="text-slate-600">{item.label}</span>
                     <strong className="text-slate-900">{item.value.toLocaleString("th-TH")}</strong>
                   </div>
