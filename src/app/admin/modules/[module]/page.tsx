@@ -217,7 +217,9 @@ export default async function AdminModulePage({
   }
 
   const fallbackRows = moduleRows(moduleKey, overview, contentPages);
-  const crudRows = crudConfig ? await getAdminCrudRows(crudConfig) : null;
+  const adminListCrudConfig =
+    crudConfig && crudConfig.adminOrderBy ? { ...crudConfig, orderBy: crudConfig.adminOrderBy } : crudConfig;
+  const crudRows = adminListCrudConfig ? await getAdminCrudRows(adminListCrudConfig) : null;
   const rows: ModuleDisplayRow[] =
     crudRows === null
       ? fallbackRows.map((row) => ({ ...row, crudRow: crudConfig ? fallbackCrudRow(crudConfig, row) : undefined }))

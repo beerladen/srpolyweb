@@ -43,7 +43,10 @@ export async function GET(
     return access.error;
   }
 
-  const rows = await getAdminCrudRows(access.config);
+  const adminListConfig = access.config.adminOrderBy
+    ? { ...access.config, orderBy: access.config.adminOrderBy }
+    : access.config;
+  const rows = await getAdminCrudRows(adminListConfig);
 
   if (!rows) {
     return NextResponse.json({ message: "ยังอ่านข้อมูลไม่ได้" }, { status: 503 });

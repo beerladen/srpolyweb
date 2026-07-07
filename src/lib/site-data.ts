@@ -558,7 +558,7 @@ export const adminModules: AdminModule[] = [
   { key: "student_stats", label: "ยอดผู้เรียน", table: "student_stats", permission: "student_stats", description: "บันทึกสถิตินักเรียน นักศึกษา รายปีการศึกษา" },
   { key: "student_enrollments", label: "ผู้เรียน ปวช./ปวส. รายปี", table: "student_enrollments", permission: "student_stats", description: "จัดการจำนวนนักเรียน นักศึกษา แยกตามปีการศึกษา ระดับ แผนกวิชา และสถานะลงทะเบียน" },
   { key: "short_course_enrollments", label: "ผู้เรียนหลักสูตรระยะสั้น", table: "short_course_enrollments", permission: "student_stats", description: "จัดการจำนวนผู้เรียนหลักสูตรระยะสั้นแบบรายวิชา รุ่น ชั่วโมงเรียน และผลสำเร็จ" },
-  { key: "personnel_profiles", label: "บุคลากร / คณะกรรมการ", table: "personnel_profiles", permission: "personnel", description: "ข้อมูลผู้บริหาร บุคลากร และคณะกรรมการ" },
+  { key: "personnel_profiles", label: "บุคลากร", table: "personnel_profiles", permission: "personnel", description: "ข้อมูลรายชื่อบุคลากร ตำแหน่ง ฝ่ายงาน และช่องทางติดต่อ" },
   { key: "personnel_summary_stats", label: "สรุปจำนวนบุคลากร", table: "personnel_summary_stats", permission: "personnel", description: "จัดการสรุปจำนวนครู บุคลากร และเจ้าหน้าที่ แยกตามปีการศึกษาและประเภท" },
   { key: "personnel_layouts", label: "เลย์เอาต์บุคลากร", table: "personnel_page_layouts", permission: "personnel", description: "ควบคุมรูปแบบการแสดงผลการ์ดบุคลากร" },
   { key: "administrative_structure", label: "โครงสร้างการบริหาร", table: "administrative_structure_units", permission: "personnel", description: "จัดการผังฝ่าย งานย่อย ผู้รับผิดชอบ สี ไอคอน ลำดับ และสถานะการแสดงผล" },

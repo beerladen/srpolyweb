@@ -54,6 +54,7 @@ export type AdminCrudModuleConfig = {
   hrefFallback?: string;
   normalizeHref?: boolean;
   orderBy?: string;
+  adminOrderBy?: string;
   uniqueFields?: string[];
   createdAt?: boolean;
   updatedAt?: boolean;
@@ -353,7 +354,7 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
   },
   {
     key: "personnel_profiles",
-    label: "บุคลากร / คณะกรรมการ",
+    label: "บุคลากร",
     table: "personnel_profiles",
     permission: "personnel",
     titleField: "full_name",
@@ -364,10 +365,11 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
     hrefTemplate: "/content/{page_slug}",
     hrefFallback: "/about",
     orderBy: "ORDER BY page_slug, sort_order, id",
+    adminOrderBy: "WHERE page_slug = 'personnel-data' ORDER BY sort_order, id",
     createdAt: true,
     updatedAt: true,
     fields: [
-      { name: "page_slug", label: "หน้าที่แสดงผล", type: "text", required: true, placeholder: "administrators" },
+      { name: "page_slug", label: "หน้าที่แสดงผล", type: "text", required: true, defaultValue: "personnel-data", hidden: true, placeholder: "personnel-data" },
       { name: "section_title", label: "หัวข้อกลุ่ม", type: "text", placeholder: "ผู้บริหาร" },
       { name: "full_name", label: "ชื่อ-สกุล", type: "text", required: true },
       { name: "position_title", label: "ตำแหน่ง", type: "textarea", required: true, span: "full" },
