@@ -616,8 +616,50 @@ export default async function StudentsPage({
                   </div>
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="w-full table-fixed border-collapse text-[13px] xl:text-sm">
+                <div className="grid gap-3 p-4 md:hidden">
+                  {pivotRows.map((row) => (
+                    <article key={row.department} className="rounded-lg border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <h3 className="line-clamp-1 font-bold text-slate-950">{row.department}</h3>
+                          <p className="mt-1 line-clamp-2 text-sm text-slate-500">{row.branch}</p>
+                        </div>
+                        <Badge className="border-0 bg-blue-50 text-blue-700">{valueCell(row.total)}</Badge>
+                      </div>
+                      <div className="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="rounded-md bg-blue-50 p-2">
+                          <span className="block font-semibold text-blue-700">ปวช.</span>
+                          <strong className="mt-1 block text-base text-slate-950">{valueCell(row.pvcTotal)}</strong>
+                        </div>
+                        <div className="rounded-md bg-emerald-50 p-2">
+                          <span className="block font-semibold text-emerald-700">ปวส.</span>
+                          <strong className="mt-1 block text-base text-slate-950">{valueCell(row.pvsTotal)}</strong>
+                        </div>
+                        <div className="rounded-md bg-amber-50 p-2">
+                          <span className="block font-semibold text-amber-700">รวม</span>
+                          <strong className="mt-1 block text-base text-slate-950">{valueCell(row.total)}</strong>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                        <span className="rounded-md bg-slate-50 px-2 py-1">ปวช.1: {valueCell(row.p1)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">ปวช.2: {valueCell(row.p2)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">ปวช.3: {valueCell(row.p3)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">ทวิ 1: {valueCell(row.pvsDualYear1)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">ทวิ 2: {valueCell(row.pvsDualYear2)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">สมทบ 1: {valueCell(row.pvsAssociateYear1)}</span>
+                        <span className="rounded-md bg-slate-50 px-2 py-1">สมทบ 2: {valueCell(row.pvsAssociateYear2)}</span>
+                      </div>
+                      {canManageStudentEnrollments ? (
+                        <div className="mt-3 flex justify-end">
+                          <StudentEnrollmentManager academicYear={selectedYear} department={row.department} rows={managerRows(row.rows)} compact />
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[980px] table-fixed border-collapse text-sm">
                     <thead>
                       <tr className="border-b border-blue-100 bg-slate-50 text-left text-xs font-bold text-slate-600">
                         <th rowSpan={2} className="w-[14%] border-r border-blue-100 px-3 py-4">แผนก</th>

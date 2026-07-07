@@ -384,7 +384,7 @@ export function PersonnelDirectory({
       : { background: "#e2e8f0" };
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex min-w-0 flex-col gap-5">
       <section className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm shadow-blue-950/5">
         <div className="relative bg-[linear-gradient(135deg,#f8fbff,#eaf4ff)] px-5 py-8 text-center">
           <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,#93c5fd,transparent)]" />
@@ -424,13 +424,13 @@ export function PersonnelDirectory({
         })}
       </section>
 
-      <section className="rounded-lg border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5">
-        <form action="/content/personnel-data" className="grid gap-3 lg:grid-cols-[minmax(240px,1.3fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_96px_86px]">
-          <label className="flex h-11 items-center gap-2 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-500">
+      <section className="overflow-hidden rounded-lg border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5">
+        <form action="/content/personnel-data" className="grid min-w-0 gap-3 lg:grid-cols-[minmax(240px,1.3fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_96px_86px]">
+          <label className="flex h-11 min-w-0 items-center gap-2 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-500">
             <Search className="size-4 text-blue-600" />
             <input name="q" defaultValue={query} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="พิมพ์ชื่อ, ตำแหน่ง หรืออีเมล" />
           </label>
-          <select name="department" defaultValue={selectedDepartment} className="h-11 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
+          <select name="department" defaultValue={selectedDepartment} className="h-11 w-full min-w-0 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
             <option value="all">ฝ่าย / แผนกทั้งหมด</option>
             {departments.map((department) => (
               <option key={department} value={department}>
@@ -438,7 +438,7 @@ export function PersonnelDirectory({
               </option>
             ))}
           </select>
-          <select name="type" defaultValue={selectedCategory} className="h-11 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
+          <select name="type" defaultValue={selectedCategory} className="h-11 w-full min-w-0 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
             <option value="all">ประเภทบุคลากรทั้งหมด</option>
             {categoryMeta.slice(1).map((item) => (
               <option key={item.key} value={item.key}>
@@ -446,7 +446,7 @@ export function PersonnelDirectory({
               </option>
             ))}
           </select>
-          <select name="position" defaultValue={selectedPosition} className="h-11 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
+          <select name="position" defaultValue={selectedPosition} className="h-11 w-full min-w-0 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-700 outline-none">
             <option value="all">ตำแหน่งทั้งหมด</option>
             {positions.map((position) => (
               <option key={position} value={position}>
@@ -454,11 +454,11 @@ export function PersonnelDirectory({
               </option>
             ))}
           </select>
-          <Button type="submit" className="h-11">
+          <Button type="submit" className="h-11 w-full">
             <Search data-icon="inline-start" />
             ค้นหา
           </Button>
-          <Button asChild type="button" variant="outline" className="h-11">
+          <Button asChild type="button" variant="outline" className="h-11 w-full">
             <Link href="/content/personnel-data">
               <RotateCcw data-icon="inline-start" />
               รีเซ็ต
