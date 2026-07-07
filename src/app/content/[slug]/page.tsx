@@ -413,7 +413,7 @@ export default async function ContentPage({
           shouldRenderAdministrativeStructure
             ? "mx-auto flex w-full max-w-none flex-col gap-0 px-0 py-0"
             : shouldRenderPersonnelDirectory
-              ? "mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-8 md:px-6"
+              ? "mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-8 md:px-6"
             : "mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 md:px-6"
         }
       >

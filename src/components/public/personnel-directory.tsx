@@ -397,7 +397,7 @@ export function PersonnelDirectory({
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {[
           { ...categoryMeta[0], value: directoryTotal, note: currentSummary[0]?.context_note ?? "รวมจากข้อมูลบุคลากรและสรุปประจำปี" },
           ...categoryStats.map((item) => ({
@@ -425,7 +425,7 @@ export function PersonnelDirectory({
       </section>
 
       <section className="overflow-hidden rounded-lg border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5">
-        <form action="/content/personnel-data" className="grid min-w-0 gap-3 lg:grid-cols-[minmax(240px,1.3fr)_minmax(180px,1fr)_minmax(180px,1fr)_minmax(180px,1fr)_96px_86px]">
+        <form action="/content/personnel-data" className="grid min-w-0 gap-3 lg:grid-cols-3 xl:grid-cols-[minmax(220px,1.2fr)_minmax(150px,.9fr)_minmax(150px,.9fr)_minmax(150px,.9fr)_86px_78px]">
           <label className="flex h-11 min-w-0 items-center gap-2 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-500">
             <Search className="size-4 text-blue-600" />
             <input name="q" defaultValue={query} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="พิมพ์ชื่อ, ตำแหน่ง หรืออีเมล" />
@@ -503,7 +503,7 @@ export function PersonnelDirectory({
         </div>
       </div>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between rounded-lg border border-blue-100 bg-white px-4 py-3 shadow-sm shadow-blue-950/5">
             <div>
@@ -513,7 +513,7 @@ export function PersonnelDirectory({
             <Badge variant="secondary">{activeProfiles.length.toLocaleString("th-TH")} โปรไฟล์</Badge>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+          <div className="grid gap-3 lg:grid-cols-2">
             {filteredProfiles.map((profile) => {
               const category = categoryMeta.find((item) => item.key === personnelCategory(profile)) ?? categoryMeta[4];
               const crudRow = personnelRowsById.get(profile.id);

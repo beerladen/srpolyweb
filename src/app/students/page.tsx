@@ -479,15 +479,15 @@ export default async function StudentsPage({
   return (
     <SiteShell active="students" settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
       <div className="bg-[#eef5fc]">
-        <section id="student-data" className="mx-auto flex max-w-[1480px] flex-col gap-5 px-4 py-7 md:px-8">
+        <section id="student-data" className="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-7 md:px-6">
           <div className="rounded-lg bg-[linear-gradient(120deg,#1748b3,#1169b7_56%,#178879)] p-5 text-white shadow-sm shadow-blue-950/15 md:p-6">
-            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,520px)] lg:items-center">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(300px,420px)] lg:items-center">
               <div className="flex items-center gap-4">
                 <div className="flex size-14 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-white/10 text-xl font-semibold">
                   SPC
                 </div>
                 <div className="min-w-0">
-                  <h1 className="text-2xl font-bold tracking-normal md:text-3xl xl:whitespace-nowrap">ระบบรายงานจำนวนนักเรียน นักศึกษา</h1>
+                  <h1 className="text-2xl font-bold tracking-normal md:text-[28px]">ระบบรายงานจำนวนนักเรียน นักศึกษา</h1>
                   <p className="mt-2 text-sm leading-6 text-blue-50">
                     วิทยาลัยสารพัดช่างสุรินทร์ · ภาคเรียนที่ 1/{selectedYear} · Public View แสดงเฉพาะจำนวนรวม
                     {reportDate ? ` · ข้อมูล ณ วันที่ ${reportDate}` : null}
@@ -540,7 +540,7 @@ export default async function StudentsPage({
           <form action="/students" className="rounded-lg border border-blue-100 bg-white p-3 shadow-sm shadow-blue-950/5">
             <input type="hidden" name="tab" value={selectedTab} />
             <input type="hidden" name="metric" value={selectedMetric} />
-            <div className="grid gap-3 lg:grid-cols-[minmax(220px,1.5fr)_160px_160px_170px_minmax(220px,1.2fr)_110px]">
+            <div className="grid gap-3 lg:grid-cols-3 xl:grid-cols-[minmax(200px,1.4fr)_120px_130px_150px_minmax(170px,1fr)_96px]">
               <label className="flex h-11 items-center gap-2 rounded-lg border border-blue-100 bg-white px-3 text-sm text-slate-500">
                 <Search className="size-4 text-blue-500" />
                 <input name="q" defaultValue={searchText} className="min-w-0 flex-1 bg-transparent outline-none" placeholder="ค้นหาแผนก / สาขาวิชา / ชั้นปี" />
