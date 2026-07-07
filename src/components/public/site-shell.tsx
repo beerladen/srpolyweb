@@ -2,10 +2,12 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChevronDown, LayoutDashboard, LogOut, Mail, MapPin, Phone, Search, Settings, ShieldCheck, UserRound } from "lucide-react";
 import { AdminInlineTools } from "@/components/public/admin-inline-tools";
+import { SpecialSitePopup } from "@/components/public/site-popup";
 import { Button } from "@/components/ui/button";
 import { getSignedInAdminUser, type AdminUser } from "@/lib/admin-auth";
 import { withBasePath } from "@/lib/base-path";
 import { canAccess } from "@/lib/permissions";
+import { getActiveSitePopup } from "@/lib/site-popups";
 import type { NavItem, SiteSettings } from "@/lib/site-data";
 import { cn } from "@/lib/utils";
 
@@ -22,10 +24,14 @@ function isExternalLink(href: string): boolean {
 }
 
 export async function SiteShell({ active, settings, navigation, adminUser, children }: SiteShellProps) {
-  const signedInAdminUser = adminUser === undefined ? await getSignedInAdminUser() : adminUser;
+  const [signedInAdminUser, activePopup] = await Promise.all([
+    adminUser === undefined ? getSignedInAdminUser() : Promise.resolve(adminUser),
+    getActiveSitePopup(active),
+  ]);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-background text-foreground">
+      <SpecialSitePopup popup={activePopup} />
       <header className="border-b border-blue-100 bg-background/95">
         {signedInAdminUser ? (
           <div className="bg-blue-950 text-white">

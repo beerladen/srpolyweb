@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { unstable_noStore as noStore } from "next/cache";
 import { queryRows } from "@/lib/db";
 
-export type SiteThemePresetId = "srpoly-blue" | "royal-indigo" | "emerald-trust" | "darklight";
+export type SiteThemePresetId = "srpoly-blue" | "royal-indigo" | "emerald-trust" | "darklight" | "memorial-mono";
 
 export type SiteThemePreset = {
   id: SiteThemePresetId;
@@ -175,6 +175,45 @@ export const siteThemePresets: SiteThemePreset[] = [
       "--sidebar-accent-foreground": "oklch(0.96 0.02 245)",
       "--sidebar-border": "oklch(1 0 0 / 14%)",
       "--sidebar-ring": "oklch(0.72 0.15 235)",
+    },
+  },
+  {
+    id: "memorial-mono",
+    name: "Memorial Monochrome",
+    description: "โทนขาว ดำ เทา สุภาพสำหรับวาระไว้อาลัยบุคคลสำคัญ ลดสีสดและเน้นความสงบน่าเคารพ",
+    mode: "light",
+    preview: {
+      background: "#f7f7f5",
+      surface: "#ffffff",
+      primary: "#171717",
+      accent: "#d4d4d4",
+    },
+    tokens: {
+      "--background": "oklch(0.985 0.002 95)",
+      "--foreground": "oklch(0.17 0 0)",
+      "--card": "oklch(1 0 0)",
+      "--card-foreground": "oklch(0.17 0 0)",
+      "--popover": "oklch(1 0 0)",
+      "--popover-foreground": "oklch(0.17 0 0)",
+      "--primary": "oklch(0.22 0 0)",
+      "--primary-foreground": "oklch(0.985 0 0)",
+      "--secondary": "oklch(0.91 0 0)",
+      "--secondary-foreground": "oklch(0.18 0 0)",
+      "--muted": "oklch(0.95 0 0)",
+      "--muted-foreground": "oklch(0.44 0 0)",
+      "--accent": "oklch(0.9 0 0)",
+      "--accent-foreground": "oklch(0.16 0 0)",
+      "--border": "oklch(0.84 0 0)",
+      "--input": "oklch(0.84 0 0)",
+      "--ring": "oklch(0.32 0 0)",
+      "--sidebar": "oklch(0.96 0 0)",
+      "--sidebar-foreground": "oklch(0.16 0 0)",
+      "--sidebar-primary": "oklch(0.22 0 0)",
+      "--sidebar-primary-foreground": "oklch(0.985 0 0)",
+      "--sidebar-accent": "oklch(0.9 0 0)",
+      "--sidebar-accent-foreground": "oklch(0.16 0 0)",
+      "--sidebar-border": "oklch(0.84 0 0)",
+      "--sidebar-ring": "oklch(0.32 0 0)",
     },
   },
 ];

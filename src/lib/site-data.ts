@@ -554,6 +554,7 @@ export const adminModules: AdminModule[] = [
   { key: "quick_links", label: "ลิงก์ด่วน / eService", table: "quick_links", permission: "cms.quick_links", description: "จัดการลิงก์ระบบสารสนเทศ บริการออนไลน์ และลิงก์ภายนอกที่หน้าแรก" },
   { key: "content_pages", label: "หน้าเนื้อหาเว็บไซต์", table: "content_pages", permission: "content_pages", description: "จัดการหน้าเนื้อหาและหน้า CMS ที่เชื่อมกับเมนู" },
   { key: "site_blocks", label: "แบนเนอร์และข้อความหน้าเว็บ", table: "site_blocks", permission: "site_blocks", description: "ปรับ hero, ข้อความสำคัญ และปุ่มลัดหน้าแรก" },
+  { key: "site_popups", label: "ป๊อปอัปวาระพิเศษ", table: "site_popups", permission: "site_blocks", description: "กำหนดป๊อปอัปพิเศษ ภาพ ข้อความ ปุ่มลิงก์ และช่วงเวลาการแสดง" },
   { key: "course_groups", label: "หลักสูตรและแผนกวิชา", table: "course_groups", permission: "course_groups", description: "จัดกลุ่มหลักสูตร รายชื่อแผนก และลิงก์เว็บไซต์แผนก" },
   { key: "student_stats", label: "ยอดผู้เรียน", table: "student_stats", permission: "student_stats", description: "บันทึกสถิตินักเรียน นักศึกษา รายปีการศึกษา" },
   { key: "student_enrollments", label: "ผู้เรียน ปวช./ปวส. รายปี", table: "student_enrollments", permission: "student_stats", description: "จัดการจำนวนนักเรียน นักศึกษา แยกตามปีการศึกษา ระดับ แผนกวิชา และสถานะลงทะเบียน" },

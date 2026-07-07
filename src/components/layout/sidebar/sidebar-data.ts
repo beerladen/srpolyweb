@@ -46,6 +46,7 @@ export const sidebarData: NavSection[] = [
       { title: "ลิงก์ด่วน / eService", href: "/admin/modules/quick_links", icon: ShieldCheck, permission: "cms.quick_links" },
       { title: "หน้าเนื้อหา", href: "/admin/modules/content_pages", icon: FileText, permission: "content_pages" },
       { title: "แบนเนอร์หน้าแรก", href: "/admin/modules/site_blocks", icon: PanelTop, permission: "site_blocks" },
+      { title: "ป๊อปอัปวาระพิเศษ", href: "/admin/modules/site_popups", icon: Bell, permission: "site_blocks" },
       { title: "หลักสูตร / แผนก", href: "/admin/modules/course_groups", icon: BookOpen, permission: "course_groups" },
       { title: "ยอดผู้เรียน", href: "/admin/modules/student_stats", icon: Sparkles, permission: "student_stats" },
       { title: "ผู้เรียน ปวช./ปวส.", href: "/admin/modules/student_enrollments", icon: Sparkles, permission: "student_stats" },
