@@ -578,6 +578,7 @@ export default async function ContentPage({
             user={adminUser}
             config={personnelConfig}
             crudRows={personnelRows}
+            headingAction={<ContentPageAdminTools user={adminUser} page={page} label="แก้ไขหัวข้อ" />}
           />
         ) : null}
         {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory || shouldRenderSchoolBoardChart ? null : (

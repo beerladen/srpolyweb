@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Award, BriefcaseBusiness, FileText, Mail, Phone, ShieldCheck, UsersRound } from "lucide-react";
 import { AdminCrudCreateButton, AdminCrudTools } from "@/components/public/admin-crud-tools";
 import { Badge } from "@/components/ui/badge";
@@ -33,6 +34,7 @@ type SchoolBoardChartProps = {
   user?: AdminUser | null;
   config?: AdminCrudModuleConfig | null;
   crudRows?: AdminCrudRow[] | null;
+  headingAction?: ReactNode;
 };
 
 function isActive(status?: string | null): boolean {
@@ -178,7 +180,7 @@ function BoardCard({
   );
 }
 
-export function SchoolBoardChart({ title, summary, profiles, user, config, crudRows }: SchoolBoardChartProps) {
+export function SchoolBoardChart({ title, summary, profiles, user, config, crudRows, headingAction }: SchoolBoardChartProps) {
   const activeProfiles = profiles.filter((profile) => isActive(profile.status)).sort((a, b) => a.sort_order - b.sort_order || a.id - b.id);
   const chair = activeProfiles.find(isChair) ?? activeProfiles[0] ?? null;
   const members = chair ? activeProfiles.filter((profile) => profile.id !== chair.id) : activeProfiles;
@@ -201,7 +203,10 @@ export function SchoolBoardChart({ title, summary, profiles, user, config, crudR
             <ShieldCheck className="size-4" />
             โครงสร้างคณะกรรมการสถานศึกษา
           </div>
-          <h2 className="mt-4 text-3xl font-extrabold tracking-normal text-blue-950 md:text-5xl">{title}</h2>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <h2 className="text-3xl font-extrabold tracking-normal text-blue-950 md:text-5xl">{title}</h2>
+            {headingAction ? <div className="shrink-0">{headingAction}</div> : null}
+          </div>
           {summary ? <p className="mx-auto mt-3 max-w-3xl text-sm leading-6 text-slate-600">{summary}</p> : null}
           {canManage && config ? (
             <div className="mt-4 flex justify-center">
