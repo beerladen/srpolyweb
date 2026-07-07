@@ -14,6 +14,7 @@ export type AdminUser = {
   id: number;
   name: string;
   email: string;
+  roleId: number | null;
   roleName: string;
   department: string;
   status: string;
@@ -33,6 +34,7 @@ type RawUser = {
   name: string;
   email: string;
   password?: string;
+  role_id: number | null;
   role: string | null;
   department: string | null;
   status: string;
@@ -80,6 +82,7 @@ function makeFallbackUser(
     id,
     name,
     email,
+    roleId: null,
     roleName,
     department,
     status: "active",
@@ -154,7 +157,7 @@ export async function getAdminRoles(): Promise<AdminRole[]> {
 export async function getAdminUsers(): Promise<AdminUser[]> {
   const rows = await queryRows<RawUser>(
     `SELECT u.id, u.name, u.email, u.role, u.department, u.status,
-            r.role_name, r.permissions AS role_permissions, u.permissions AS user_permissions
+            u.role_id, r.role_name, r.permissions AS role_permissions, u.permissions AS user_permissions
      FROM users u
      LEFT JOIN roles r ON r.id = u.role_id
      ORDER BY u.id`
@@ -173,6 +176,7 @@ export async function getAdminUsers(): Promise<AdminUser[]> {
       id: user.id,
       name: user.name,
       email: user.email,
+      roleId: user.role_id,
       roleName: user.role_name ?? user.role ?? "-",
       department: user.department ?? "-",
       status: user.status,
@@ -197,7 +201,7 @@ export async function authenticateAdmin(identifier: string, password: string): P
 
   const rows = await queryRows<RawUser>(
     `SELECT u.id, u.name, u.email, u.password, u.role, u.department, u.status,
-            r.role_name, r.permissions AS role_permissions, u.permissions AS user_permissions
+            u.role_id, r.role_name, r.permissions AS role_permissions, u.permissions AS user_permissions
      FROM users u
      LEFT JOIN roles r ON r.id = u.role_id
      WHERE u.status = 'active'
@@ -217,6 +221,7 @@ export async function authenticateAdmin(identifier: string, password: string): P
       id: user.id,
       name: user.name,
       email: user.email,
+      roleId: user.role_id,
       roleName: user.role_name ?? user.role ?? "-",
       department: user.department ?? "-",
       status: user.status,
