@@ -10,7 +10,6 @@ import {
   MessageCircle,
   Phone,
   Scale,
-  UsersRound,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,6 +20,10 @@ import {
   type AdministrativeStructureUnit,
 } from "@/components/public/administrative-structure-chart";
 import { ContentPageAdminTools } from "@/components/public/content-page-admin-tools";
+import {
+  PersonnelDirectory,
+  type PersonnelDirectoryProfile,
+} from "@/components/public/personnel-directory";
 import { SectionHeading } from "@/components/public/section-heading";
 import { SiteShell } from "@/components/public/site-shell";
 import { getSignedInAdminUser } from "@/lib/admin-auth";
@@ -93,6 +96,8 @@ type RawLegalItem = {
   status: string;
 };
 
+type SearchParams = Record<string, string | string[] | undefined>;
+
 async function getAdministrativeStructureUnits() {
   return queryRows<AdministrativeStructureUnit>(
     `SELECT id, academic_year, unit_key, unit_type, title, leader_name, leader_position, description,
@@ -129,6 +134,16 @@ async function getPersonnelSection(slug: string) {
     layout: layouts?.find((layout) => layout.status === "active") ?? null,
     layouts: layouts ?? [],
   };
+}
+
+async function getPersonnelDirectoryProfiles() {
+  return queryRows<PersonnelDirectoryProfile>(
+    `SELECT id, page_slug, section_title, full_name, position_title, department,
+            committee_role, contact_phone, contact_email, contact_channel, term_period,
+            photo_path, appointment_file, profile_note, sort_order, status
+     FROM personnel_profiles
+     ORDER BY CASE WHEN status = 'active' THEN 0 ELSE 1 END, page_slug, sort_order, id`
+  );
 }
 
 function isPublishedStatus(status?: string | null): boolean {
@@ -253,15 +268,20 @@ function normalizeDateText(value: string | Date | null): string {
 
 export default async function ContentPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams?: Promise<SearchParams>;
 }) {
   const { slug } = await params;
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const shouldLoadAdministrativeStructure = slug === "administrative-structure";
+  const shouldLoadPersonnelDirectory = slug === "personnel-data";
   const [
     overview,
     adminUser,
     personnelSection,
+    personnelDirectoryProfiles,
     personnelConfig,
     layoutConfig,
     personnelSummaryConfig,
@@ -274,6 +294,7 @@ export default async function ContentPage({
     getSiteOverview(),
     getSignedInAdminUser(),
     getPersonnelSection(slug),
+    shouldLoadPersonnelDirectory ? getPersonnelDirectoryProfiles() : Promise.resolve(null),
     getAdminCrudAvailableConfig("personnel_profiles"),
     getAdminCrudAvailableConfig("personnel_layouts"),
     getAdminCrudAvailableConfig("personnel_summary_stats"),
@@ -295,7 +316,6 @@ export default async function ContentPage({
     administrativeStructureConfig ? getAdminCrudRows(administrativeStructureConfig, 200) : Promise.resolve(null),
   ]);
   const personnelRowsById = new Map((personnelRows ?? []).map((row) => [row.id, row]));
-  const summaryRowsById = new Map((summaryCrudRows ?? []).map((row) => [row.id, row]));
   const legalRowsById = new Map((legalCrudRows ?? []).map((row) => [row.id, row]));
   const personnelLayout = personnelSection.layout;
   const layoutRow = layoutRows?.find((row) => row.values.page_slug === slug);
@@ -325,6 +345,20 @@ export default async function ContentPage({
     page = (await getAdminContentPages()).find((item) => item.slug === slug);
   }
 
+  if (!page && slug === "personnel-data") {
+    page = {
+      id: -50,
+      slug: "personnel-data",
+      title: "ข้อมูลบุคลากร",
+      summary: "ระบบบุคลากรและข้อมูลตำแหน่งของวิทยาลัยสารพัดช่างสุรินทร์",
+      body: "",
+      contentType: "people",
+      navKey: "about",
+      status: "published",
+      href: "/content/personnel-data",
+    };
+  }
+
   if (!page) {
     notFound();
   }
@@ -332,9 +366,6 @@ export default async function ContentPage({
   const coverImage = publicAssetPath(page.coverImage);
   const attachmentPath = publicAssetPath(page.attachmentPath);
   const personnelSummaryStats = personnelSummaryRows ?? [];
-  const latestPersonnelYear = personnelSummaryStats[0]?.academic_year ?? "2569";
-  const currentPersonnelSummary = personnelSummaryStats.filter((item) => item.academic_year === latestPersonnelYear);
-  const personnelTotal = currentPersonnelSummary.reduce((sum, item) => sum + Number(item.staff_count ?? 0), 0);
   const legalItems = legalRows ?? [];
   const shouldRenderPersonnelCards = slug !== "personnel-data" && activePersonnelProfiles.length > 0 && Boolean(personnelLayout);
   const shouldShowInactivePersonnelTools =
@@ -343,6 +374,7 @@ export default async function ContentPage({
     shouldRenderPersonnelCards &&
     ["people", "committee"].includes(page.contentType ?? "");
   const shouldRenderAdministrativeStructure = slug === "administrative-structure";
+  const shouldRenderPersonnelDirectory = slug === "personnel-data";
   const pageBody = (
     <>
       <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
@@ -380,17 +412,19 @@ export default async function ContentPage({
         className={
           shouldRenderAdministrativeStructure
             ? "mx-auto flex w-full max-w-none flex-col gap-0 px-0 py-0"
+            : shouldRenderPersonnelDirectory
+              ? "mx-auto flex w-full max-w-[1500px] flex-col gap-6 px-4 py-8 md:px-6"
             : "mx-auto flex max-w-7xl flex-col gap-8 px-4 py-10 md:px-6"
         }
       >
-        {shouldRenderAdministrativeStructure ? null : (
+        {shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory ? null : (
           <SectionHeading
             title={page.title}
             description={page.summary}
             action={<ContentPageAdminTools user={adminUser} page={page} />}
           />
         )}
-        {coverImage ? (
+        {coverImage && !shouldRenderPersonnelDirectory ? (
           <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
             <CardContent className="p-4">
               <div className="overflow-hidden rounded-md border bg-white">
@@ -400,86 +434,17 @@ export default async function ContentPage({
             </CardContent>
           </Card>
         ) : null}
-        {slug === "personnel-data" ? (
-          <section className="flex flex-col gap-5 rounded-md border border-blue-100 bg-sky-50/80 p-5">
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <Badge variant="outline">ปีการศึกษา {latestPersonnelYear}</Badge>
-                <h2 className="mt-2 text-2xl font-bold tracking-normal text-slate-950">สรุปข้อมูลบุคลากร</h2>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  แสดงจำนวนครู บุคลากร และเจ้าหน้าที่ตามประเภท สามารถจัดการย้อนหลังได้จากระบบหลังบ้าน
-                </p>
-              </div>
-              {personnelSummaryConfig ? (
-                <AdminCrudCreateButton
-                  user={adminUser}
-                  permission={personnelSummaryConfig.permission}
-                  moduleKey={personnelSummaryConfig.key}
-                  moduleLabel={personnelSummaryConfig.label}
-                  fields={personnelSummaryConfig.fields}
-                  label="เพิ่มสรุปบุคลากร"
-                  adminHref="/admin/modules/personnel_summary_stats"
-                />
-              ) : null}
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="rounded-md border border-blue-100 bg-blue-700 p-4 text-white shadow-sm">
-                <span className="text-xs font-semibold text-blue-100">รวมทั้งหมด</span>
-                <strong className="mt-1 block text-3xl">{personnelTotal.toLocaleString("th-TH")}</strong>
-                <span className="text-sm text-blue-100">คน</span>
-              </div>
-              {currentPersonnelSummary.slice(0, 7).map((item) => {
-                const crudRow = summaryRowsById.get(item.id);
-
-                return (
-                  <article key={item.id} className="rounded-md border border-blue-100 bg-white p-4 shadow-sm shadow-blue-950/5">
-                    <div className="flex items-start justify-between gap-3">
-                      <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700">
-                        <UsersRound className="size-5" />
-                      </span>
-                      {personnelSummaryConfig && crudRow ? (
-                        <AdminCrudTools
-                          user={adminUser}
-                          permission={personnelSummaryConfig.permission}
-                          moduleKey={personnelSummaryConfig.key}
-                          moduleLabel={personnelSummaryConfig.label}
-                          fields={personnelSummaryConfig.fields}
-                          row={crudRow}
-                          label="จัดการ"
-                          triggerSize="sm"
-                          adminHref="/admin/modules/personnel_summary_stats"
-                          afterDeleteHref="/admin/modules/personnel_summary_stats"
-                        />
-                      ) : null}
-                    </div>
-                    <strong className="mt-3 block text-lg text-slate-950">{item.personnel_type}</strong>
-                    <span className="mt-1 block text-3xl font-bold text-blue-700">{Number(item.staff_count).toLocaleString("th-TH")}</span>
-                    <span className="text-sm text-slate-500">{item.department ?? "บุคลากร"}</span>
-                    {item.context_note ? <p className="mt-3 text-sm leading-6 text-slate-600">{item.context_note}</p> : null}
-                  </article>
-                );
-              })}
-            </div>
-            <div className="overflow-hidden rounded-md border border-blue-100 bg-white">
-              <div className="grid grid-cols-[1fr_120px_130px] gap-3 border-b bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500">
-                <span>ประเภทบุคลากร</span>
-                <span>จำนวน</span>
-                <span className="text-right">ปีการศึกษา</span>
-              </div>
-              <div className="divide-y divide-blue-100">
-                {personnelSummaryStats.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_120px_130px] gap-3 px-4 py-3 text-sm">
-                    <span>
-                      <strong className="block text-slate-950">{item.personnel_type}</strong>
-                      <span className="text-slate-500">{item.department ?? item.context_note ?? "-"}</span>
-                    </span>
-                    <strong className="text-blue-700">{Number(item.staff_count).toLocaleString("th-TH")} คน</strong>
-                    <span className="text-right text-slate-600">{item.academic_year}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
+        {shouldRenderPersonnelDirectory ? (
+          <PersonnelDirectory
+            profiles={personnelDirectoryProfiles ?? []}
+            summaryStats={personnelSummaryStats}
+            searchParams={resolvedSearchParams}
+            user={adminUser}
+            personnelConfig={personnelConfig}
+            personnelRows={personnelRows}
+            summaryConfig={personnelSummaryConfig}
+            summaryRows={summaryCrudRows}
+          />
         ) : null}
         {slug === "laws" ? (
           <section className="flex flex-col gap-4 rounded-md border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5">
@@ -588,7 +553,7 @@ export default async function ContentPage({
             pageSummary={page.summary}
           />
         ) : null}
-        {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure ? null : (
+        {shouldShowPersonnelBeforeBody || shouldRenderAdministrativeStructure || shouldRenderPersonnelDirectory ? null : (
           <>
         <Card className="border-blue-100 shadow-sm shadow-blue-950/5">
           <CardContent

@@ -9,7 +9,6 @@ import {
   GraduationCap,
   Search,
   UsersRound,
-  X,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,6 +22,7 @@ import { canAccess } from "@/lib/permissions";
 import { getSiteOverview } from "@/lib/site-data";
 import { StudentEnrollmentManager, type StudentEnrollmentManagerRow } from "./student-enrollment-manager";
 import { StudentReportActions } from "./student-report-actions";
+import { StudentReportMetaManager, type StudentReportMetaRow } from "./student-report-meta-manager";
 
 type RawStudentEnrollment = {
   id: number;
@@ -434,8 +434,6 @@ export default async function StudentsPage({
   });
   const pivotRows = buildPivotRows(filteredRegularRows, selectedMetric);
   const allPivotRowsForYear = buildPivotRows(yearRegularRows, selectedMetric);
-  const focusedDepartment = firstSearchValue(resolvedSearchParams, "focus") ?? pivotRows.find((row) => row.total > 0)?.department;
-  const focusedRow = pivotRows.find((row) => row.department === focusedDepartment) ?? pivotRows[0];
   const shortCrudRowsById = new Map((shortCrudRows ?? []).map((row) => [row.id, row]));
   const canManageStudentEnrollments = Boolean(
     adminUser && enrollmentConfig && canAccess(adminUser.effectivePermissions, enrollmentConfig.permission)
@@ -454,8 +452,14 @@ export default async function StudentsPage({
   const totalPvc = levelTotals.slice(0, 3).reduce((sum, row) => sum + row.total, 0);
   const totalPvs = levelTotals.slice(3, 7).reduce((sum, row) => sum + row.total, 0);
   const totalShort = filteredShortRows.reduce((sum, row) => sum + Number(row.learner_count ?? 0), 0);
-  const reportDate = formatThaiDate(yearRegularRows.find((row) => row.report_date)?.report_date);
+  const reportDateValue = yearRegularRows.find((row) => row.report_date)?.report_date?.slice(0, 10) ?? "";
+  const reportDate = formatThaiDate(reportDateValue);
   const exportHref = csvHref(pivotRows);
+  const reportMetaRows: StudentReportMetaRow[] = yearRegularRows.map((row) => ({
+    id: row.id,
+    academicYear: row.academic_year,
+    reportDate: row.report_date,
+  }));
   const managerRows = (rows: RawStudentEnrollment[]): StudentEnrollmentManagerRow[] =>
     rows.map((row) => ({
       id: row.id,
@@ -476,21 +480,26 @@ export default async function StudentsPage({
     <SiteShell active="students" settings={overview.settings} navigation={overview.navigation} adminUser={adminUser}>
       <div className="bg-[#eef5fc]">
         <section id="student-data" className="mx-auto flex max-w-[1480px] flex-col gap-5 px-4 py-7 md:px-8">
-          <div className="rounded-lg bg-[linear-gradient(120deg,#1748b3,#1169b7_56%,#178879)] p-7 text-white shadow-sm shadow-blue-950/15">
-            <div className="grid gap-6 lg:grid-cols-[1fr_2fr] lg:items-center">
+          <div className="rounded-lg bg-[linear-gradient(120deg,#1748b3,#1169b7_56%,#178879)] p-5 text-white shadow-sm shadow-blue-950/15 md:p-6">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(360px,520px)] lg:items-center">
               <div className="flex items-center gap-4">
-                <div className="flex size-16 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-white/10 text-2xl font-semibold">
+                <div className="flex size-14 shrink-0 items-center justify-center rounded-lg border border-white/25 bg-white/10 text-xl font-semibold">
                   SPC
                 </div>
-                <div>
-                  <h1 className="text-3xl font-bold tracking-normal">ระบบรายงานจำนวนนักเรียน นักศึกษา</h1>
+                <div className="min-w-0">
+                  <h1 className="text-2xl font-bold tracking-normal md:text-3xl xl:whitespace-nowrap">ระบบรายงานจำนวนนักเรียน นักศึกษา</h1>
                   <p className="mt-2 text-sm leading-6 text-blue-50">
                     วิทยาลัยสารพัดช่างสุรินทร์ · ภาคเรียนที่ 1/{selectedYear} · Public View แสดงเฉพาะจำนวนรวม
-                    {reportDate ? ` · ข้อมูลวันที่ ${reportDate}` : null}
+                    {reportDate ? ` · ข้อมูล ณ วันที่ ${reportDate}` : null}
                   </p>
                 </div>
               </div>
-              <StudentReportActions exportHref={exportHref} />
+              <div className="flex flex-col gap-2 lg:items-end">
+                <StudentReportActions exportHref={exportHref} />
+                {canManageStudentEnrollments ? (
+                  <StudentReportMetaManager rows={reportMetaRows} academicYear={selectedYear} reportDate={reportDateValue} />
+                ) : null}
+              </div>
             </div>
           </div>
 
@@ -593,7 +602,7 @@ export default async function StudentsPage({
           </div>
 
           {selectedTab === "regular" ? (
-            <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+            <div className="grid gap-5">
               <section className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm shadow-blue-950/5">
                 <div className="flex flex-col gap-3 border-b border-blue-100 px-5 py-5 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -635,9 +644,7 @@ export default async function StudentsPage({
                         <tr key={row.department} className="border-b border-blue-50 text-slate-700 hover:bg-blue-50/60">
                           <td className="border-r border-blue-50 px-3 py-3 font-bold leading-5 text-slate-950">{row.department}</td>
                           <td className="border-r border-blue-50 px-3 py-3 leading-5">
-                            <Link href={buildHref({ year: selectedYear, metric: selectedMetric, q: searchText, level: selectedLevel, department: selectedDepartment, focus: row.department })} className="font-medium hover:text-blue-700 hover:underline">
-                              {row.branch}
-                            </Link>
+                            <span className="font-medium">{row.branch}</span>
                           </td>
                           <td className="px-2 py-3 text-center">{valueCell(row.p1)}</td>
                           <td className="px-2 py-3 text-center">{valueCell(row.p2)}</td>
@@ -675,81 +682,9 @@ export default async function StudentsPage({
                   </table>
                 </div>
               </section>
-
-              <aside className="flex flex-col gap-4">
-                <section className="rounded-lg border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5">
-                  <h3 className="text-lg font-bold tracking-normal text-slate-950">สรุปตามระดับชั้น</h3>
-                  <div className="mt-5 flex flex-col gap-4">
-                    {levelTotals.map((item) => {
-                      const ratio = totalRegular > 0 ? Math.max(6, Math.round((item.total / totalRegular) * 100)) : 0;
-                      return (
-                        <div key={item.key} className="grid grid-cols-[64px_1fr_44px] items-center gap-3">
-                          <span className="font-bold text-slate-900">{item.label}</span>
-                          <span className="h-2 overflow-hidden rounded-full bg-slate-100">
-                            <span className="block h-full rounded-full bg-[linear-gradient(90deg,#1d4ed8,#0f766e)]" style={{ width: `${ratio}%` }} />
-                          </span>
-                          <span className="text-right text-sm text-slate-600">{toThaiNumber(item.total)}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-
-                <section className="rounded-lg border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5">
-                  <h3 className="text-lg font-bold tracking-normal text-slate-950">ตัวอย่างรายละเอียดเมื่อคลิกแถว</h3>
-                  {focusedRow ? (
-                    <div className="mt-4 rounded-lg border border-blue-100">
-                      <div className="flex items-center justify-between rounded-t-lg bg-blue-50 px-4 py-3">
-                        <strong className="text-blue-700">{focusedRow.department}</strong>
-                        <Link href={buildHref({ year: selectedYear, metric: selectedMetric, q: searchText, level: selectedLevel, department: selectedDepartment })} className="text-blue-700">
-                          <X className="size-4" />
-                        </Link>
-                      </div>
-                      <div className="px-4 py-4">
-                        <p className="text-xs leading-5 text-slate-500">แสดงเฉพาะจำนวนรายระดับชั้นของแผนก/สาขาที่เลือก</p>
-                        <table className="mt-4 w-full text-sm">
-                          <thead className="bg-slate-50 text-left text-xs text-slate-500">
-                            <tr>
-                              <th className="px-3 py-3">ระดับชั้น</th>
-                              <th className="px-3 py-3 text-right">จำนวน</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-blue-50">
-                            {[
-                              ["ปวช.1", focusedRow.p1],
-                              ["ปวช.2", focusedRow.p2],
-                              ["ปวช.3", focusedRow.p3],
-                              ["ปวส.ทวิ ปี 1", focusedRow.pvsDualYear1],
-                              ["ปวส.ทวิ ปี 2", focusedRow.pvsDualYear2],
-                              ["ปวส.ภาคสมทบ ปี 1", focusedRow.pvsAssociateYear1],
-                              ["ปวส.ภาคสมทบ ปี 2", focusedRow.pvsAssociateYear2],
-                            ].map(([label, value]) => (
-                              <tr key={String(label)}>
-                                <td className="px-3 py-3 text-slate-600">{label}</td>
-                                <td className="px-3 py-3 text-right text-slate-700">{valueCell(Number(value))}</td>
-                              </tr>
-                            ))}
-                            <tr className="font-bold">
-                              <td className="px-3 py-3">รวม</td>
-                              <td className="px-3 py-3 text-right">{toThaiNumber(focusedRow.total)}</td>
-                            </tr>
-                          </tbody>
-                        </table>
-                        {canManageStudentEnrollments ? (
-                          <div className="mt-4">
-                            <StudentEnrollmentManager academicYear={selectedYear} department={focusedRow.department} rows={managerRows(focusedRow.rows)} />
-                          </div>
-                        ) : null}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="mt-3 text-sm text-slate-500">ยังไม่มีข้อมูลในตัวกรองนี้</p>
-                  )}
-                </section>
-              </aside>
             </div>
           ) : (
-            <div className="grid gap-5 xl:grid-cols-[1fr_360px]">
+            <div className="grid gap-5">
               <section className="overflow-hidden rounded-lg border border-blue-100 bg-white shadow-sm shadow-blue-950/5">
                 <div className="flex flex-col gap-3 border-b border-blue-100 px-5 py-5 md:flex-row md:items-start md:justify-between">
                   <div>
@@ -842,24 +777,6 @@ export default async function StudentsPage({
                   </div>
                 ) : null}
               </section>
-
-              <aside className="rounded-lg border border-blue-100 bg-white p-5 shadow-sm shadow-blue-950/5">
-                <h3 className="text-lg font-bold text-slate-950">สรุปหลักสูตรระยะสั้น</h3>
-                <div className="mt-5 flex flex-col gap-3">
-                  {uniqueSorted(filteredShortRows.map((row) => row.department_name)).map((department) => {
-                    const total = filteredShortRows
-                      .filter((row) => row.department_name === department)
-                      .reduce((sum, row) => sum + Number(row.learner_count ?? 0), 0);
-                    return (
-                      <div key={department} className="rounded-lg border border-blue-100 p-4">
-                        <span className="text-sm font-bold text-slate-900">{department}</span>
-                        <strong className="mt-2 block text-2xl text-blue-700">{toThaiNumber(total)}</strong>
-                        <span className="text-xs text-slate-500">ผู้เรียน</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </aside>
             </div>
           )}
 
