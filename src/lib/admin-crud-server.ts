@@ -1,5 +1,6 @@
 import {
   getAdminCrudConfig,
+  type AdminCrudOption,
   type AdminCrudField,
   type AdminCrudModuleConfig,
   type AdminCrudRow,
@@ -10,9 +11,41 @@ import { normalizeLegacyUrl } from "@/lib/legacy-paths";
 
 type RawCrudRow = Record<string, unknown> & { id: number };
 
+type PersonnelPositionOptionRow = {
+  group_name: string;
+  position_name: string;
+};
+
 type NormalizedMutation =
   | { ok: true; values: Record<string, string | number | null> }
   | { ok: false; message: string };
+
+const fallbackPersonnelPositionRows: PersonnelPositionOptionRow[] = [
+  { group_name: "ผู้บริหาร", position_name: "ผู้อำนวยการ" },
+  { group_name: "ผู้บริหาร", position_name: "รองผู้อำนวยการ" },
+  { group_name: "ผู้บริหาร", position_name: "หัวหน้างาน" },
+  { group_name: "ผู้บริหาร", position_name: "ผู้ช่วยหัวหน้างาน" },
+  { group_name: "ข้าราชการครู", position_name: "ผู้อำนวยการ" },
+  { group_name: "ข้าราชการครู", position_name: "รองผู้อำนวยการ" },
+  { group_name: "ข้าราชการครู", position_name: "ครูผู้ช่วย" },
+  { group_name: "ข้าราชการครู", position_name: "ครู คศ.1" },
+  { group_name: "ข้าราชการครู", position_name: "ครูชำนาญการ" },
+  { group_name: "ข้าราชการครู", position_name: "ครูชำนาญการพิเศษ" },
+  { group_name: "ข้าราชการครู", position_name: "ครูเชี่ยวชาญ" },
+  { group_name: "พนักงานราชการ", position_name: "พนักงานราชการ (ครู)" },
+  { group_name: "พนักงานราชการ", position_name: "พนักงานราชการทั่วไป" },
+  { group_name: "พนักงานราชการ", position_name: "เจ้าหน้าที่สนับสนุน" },
+  { group_name: "ครูจ้างสอน/ผู้ชำนาญการ", position_name: "ครูจ้างสอน" },
+  { group_name: "ครูจ้างสอน/ผู้ชำนาญการ", position_name: "ผู้ชำนาญการ" },
+  { group_name: "ครูจ้างสอน/ผู้ชำนาญการ", position_name: "ผู้เชี่ยวชาญเฉพาะทาง" },
+  { group_name: "ครูจ้างสอน/ผู้ชำนาญการ", position_name: "วิทยากรพิเศษ" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "เจ้าหน้าที่ธุรการ" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "นักการภารโรง" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "พนักงานขับรถ" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "เจ้าหน้าที่รักษาความปลอดภัย" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "ลูกจ้างประจำ" },
+  { group_name: "เจ้าหน้าที่/ลูกจ้าง", position_name: "ลูกจ้างชั่วคราว" },
+];
 
 function quoteIdentifier(value: string): string {
   return `\`${value.replace(/`/g, "")}\``;
@@ -163,12 +196,15 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
   const needsNewsCategories = config.fields.some((field) => field.optionsSource === "news_categories");
   const needsDocumentCategories = config.fields.some((field) => field.optionsSource === "document_categories");
   const needsPersonnelGroups = config.fields.some((field) => field.optionsSource === "personnel_groups");
+  const needsPersonnelPositionOptions = config.fields.some(
+    (field) => field.conditionalOptionsSource === "personnel_positions_by_group"
+  );
 
-  if (!needsNewsCategories && !needsDocumentCategories && !needsPersonnelGroups) {
+  if (!needsNewsCategories && !needsDocumentCategories && !needsPersonnelGroups && !needsPersonnelPositionOptions) {
     return config;
   }
 
-  const [newsCategories, documentCategories, personnelGroups] = await Promise.all([
+  const [newsCategories, documentCategories, personnelGroups, personnelPositionRows] = await Promise.all([
     needsNewsCategories
       ? queryRows<{ id: number; name: string }>(
           "SELECT id, name FROM categories WHERE type = 'news' AND status = 'active' ORDER BY sort_order, id"
@@ -182,6 +218,11 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
     needsPersonnelGroups
       ? queryRows<{ id: number; name: string }>(
           "SELECT id, name FROM categories WHERE type = 'personnel_group' AND status = 'active' ORDER BY sort_order, id"
+        )
+      : Promise.resolve(null),
+    needsPersonnelPositionOptions
+      ? queryRows<PersonnelPositionOptionRow>(
+          "SELECT group_name, position_name FROM personnel_position_options WHERE status = 'active' ORDER BY group_name, sort_order, id"
         )
       : Promise.resolve(null),
   ]);
@@ -207,6 +248,25 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
     value: category.name,
     label: category.name,
   }));
+  const personnelPositionOptions = (personnelPositionRows ?? fallbackPersonnelPositionRows).reduce<
+    Record<string, AdminCrudOption[]>
+  >((groups, row) => {
+    const groupName = String(row.group_name ?? "").trim();
+    const positionName = String(row.position_name ?? "").trim();
+
+    if (!groupName || !positionName) {
+      return groups;
+    }
+
+    const currentOptions = groups[groupName] ?? [];
+
+    if (!currentOptions.some((option) => option.value === positionName)) {
+      currentOptions.push({ value: positionName, label: positionName });
+    }
+
+    groups[groupName] = currentOptions;
+    return groups;
+  }, {});
 
   return {
     ...config,
@@ -224,6 +284,14 @@ async function withDynamicFieldOptions(config: AdminCrudModuleConfig): Promise<A
               ...field,
               options: personnelGroupOptions,
               defaultValue: field.defaultValue ?? personnelGroupOptions[0]?.value ?? "",
+            }
+        : field.conditionalOptionsSource === "personnel_positions_by_group"
+          ? {
+              ...field,
+              conditionalOptions: {
+                sourceField: field.conditionalOptions?.sourceField ?? "section_title",
+                values: personnelPositionOptions,
+              },
             }
           : field
     ),

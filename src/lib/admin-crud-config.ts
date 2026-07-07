@@ -36,6 +36,7 @@ export type AdminCrudField = {
   uploadFolder?: "images" | "news" | "personnel" | "documents";
   uploadHint?: string;
   optionsSource?: "news_categories" | "document_categories" | "personnel_groups";
+  conditionalOptionsSource?: "personnel_positions_by_group";
   conditionalOptions?: {
     sourceField: string;
     values: Record<string, AdminCrudOption[]>;
@@ -103,16 +104,6 @@ const commonActiveField: AdminCrudField = {
   defaultValue: "active",
   options: activeStatusOptions,
 };
-
-const teacherPositionOptions: AdminCrudOption[] = [
-  { value: "ผู้อำนวยการ", label: "ผู้อำนวยการ" },
-  { value: "รองผู้อำนวยการ", label: "รองผู้อำนวยการ" },
-  { value: "ครูผู้ช่วย", label: "ครูผู้ช่วย" },
-  { value: "ครู คศ.1", label: "ครู คศ.1" },
-  { value: "ครูชำนาญการ", label: "ครูชำนาญการ" },
-  { value: "ครูชำนาญการพิเศษ", label: "ครูชำนาญการพิเศษ" },
-  { value: "ครูเชี่ยวชาญ", label: "ครูเชี่ยวชาญ" },
-];
 
 export const adminCrudConfigs: AdminCrudModuleConfig[] = [
   {
@@ -428,13 +419,12 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
         type: "textarea",
         required: true,
         span: "full",
+        conditionalOptionsSource: "personnel_positions_by_group",
         conditionalOptions: {
           sourceField: "section_title",
-          values: {
-            ข้าราชการครู: teacherPositionOptions,
-          },
+          values: {},
         },
-        description: "เมื่อเลือกกลุ่มข้าราชการครู ระบบจะแสดงตำแหน่งมาตรฐานให้เลือก ส่วนกลุ่มอื่นยังพิมพ์ตำแหน่งได้ตามจริง",
+        description: "ระบบจะแสดงตำแหน่งตามกลุ่มบุคลากรที่เลือก เพิ่มหรือลบตัวเลือกได้ที่เมนู ตำแหน่งบุคลากร",
       },
       { name: "department", label: "ฝ่าย / แผนก", type: "text" },
       { name: "committee_role", label: "บทบาทในคณะกรรมการ", type: "text", optionalColumn: true, placeholder: "ประธานกรรมการ / กรรมการ / เลขานุการ" },
@@ -452,6 +442,36 @@ export const adminCrudConfigs: AdminCrudModuleConfig[] = [
       },
       { name: "appointment_file", label: "ไฟล์คำสั่งแต่งตั้ง / เอกสารอ้างอิง", type: "file", uploadFolder: "documents", optionalColumn: true, placeholder: "/uploads/documents/appointment.pdf" },
       { name: "profile_note", label: "รายละเอียดหน้าที่ / หมายเหตุ", type: "textarea", span: "full", optionalColumn: true },
+      { name: "sort_order", label: "ลำดับ", type: "number", defaultValue: 0 },
+      commonActiveField,
+    ],
+  },
+  {
+    key: "personnel_position_options",
+    label: "ตำแหน่งบุคลากร",
+    table: "personnel_position_options",
+    permission: "personnel",
+    titleField: "position_name",
+    descriptionField: "description",
+    categoryField: "group_name",
+    statusField: "status",
+    metricField: "sort_order",
+    hrefFallback: "/content/personnel-data",
+    orderBy: "ORDER BY group_name, sort_order, id",
+    createdAt: true,
+    updatedAt: true,
+    fields: [
+      {
+        name: "group_name",
+        label: "กลุ่มบุคลากร",
+        type: "select",
+        required: true,
+        defaultValue: "ข้าราชการครู",
+        optionsSource: "personnel_groups",
+        description: "ตำแหน่งนี้จะแสดงในดรอปดาวน์เมื่อเลือกกลุ่มบุคลากรเดียวกัน",
+      },
+      { name: "position_name", label: "ชื่อตำแหน่ง", type: "text", required: true, placeholder: "ครูจ้างสอน / นักการภารโรง / ผู้ชำนาญการ" },
+      { name: "description", label: "คำอธิบาย", type: "textarea", span: "full", optionalColumn: true },
       { name: "sort_order", label: "ลำดับ", type: "number", defaultValue: 0 },
       commonActiveField,
     ],
