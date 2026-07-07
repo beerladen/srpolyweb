@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, FileUp, ImageUp, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { showAppToast } from "@/components/ui/app-toast";
 import {
   Dialog,
   DialogContent,
@@ -147,12 +148,16 @@ export function ContentPageAdminTools({
     setIsSaving(false);
 
     if (!response.ok) {
-      setMessage(result?.message ?? "ยังบันทึกไม่ได้ โปรดลองอีกครั้งหรือตรวจสอบสิทธิ์ผู้ใช้");
+      const errorMessage = result?.message ?? "ยังบันทึกไม่ได้ โปรดลองอีกครั้งหรือตรวจสอบสิทธิ์ผู้ใช้";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
       return;
     }
 
-    setMessage(isEditing ? "อัปเดตแล้ว" : "สร้างหน้าใหม่แล้ว");
+    const successMessage = isEditing ? "อัปเดตข้อมูลสำเร็จ" : "สร้างหน้าใหม่สำเร็จ";
+    setMessage(successMessage);
     setOpen(false);
+    showAppToast({ type: "success", title: successMessage, message: "บันทึกหน้าเนื้อหาเรียบร้อยแล้ว" });
     router.refresh();
 
     if (!isEditing && result?.page) {
@@ -229,12 +234,15 @@ export function ContentPageAdminTools({
     setIsDeleting(false);
 
     if (!response.ok) {
-      setMessage(result?.message ?? "ยังลบไม่ได้ โปรดลองอีกครั้งหรือตรวจสอบสิทธิ์ผู้ใช้");
+      const errorMessage = result?.message ?? "ยังลบไม่ได้ โปรดลองอีกครั้งหรือตรวจสอบสิทธิ์ผู้ใช้";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "ลบไม่สำเร็จ", message: errorMessage });
       return;
     }
 
     setMessage("ลบหน้าเนื้อหาแล้ว");
     setOpen(false);
+    showAppToast({ type: "success", title: "ลบหน้าเนื้อหาสำเร็จ", message: "ลบข้อมูลเรียบร้อยแล้ว" });
     router.refresh();
     router.push(afterDeleteHref);
   }
@@ -249,7 +257,7 @@ export function ContentPageAdminTools({
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? "จัดการหน้าเนื้อหา" : "เพิ่มหน้าเนื้อหา"}</DialogTitle>
+          <DialogTitle>{isEditing ? "อัปเดตข้อมูลหน้าเนื้อหา" : "เพิ่มหน้าเนื้อหา"}</DialogTitle>
           <DialogDescription>
             {isEditing
               ? "แก้ไข อัปเดต เปิดดู หรือลบหน้าเนื้อหานี้ได้จาก modal เดียว"
@@ -466,7 +474,7 @@ export function ContentPageAdminTools({
           </div>
           <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
             <Save data-icon="inline-start" />
-            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดต" : "สร้างหน้า"}
+            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดตข้อมูล" : "สร้างหน้า"}
           </Button>
         </DialogFooter>
       </DialogContent>

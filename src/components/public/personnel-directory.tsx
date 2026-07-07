@@ -70,153 +70,6 @@ const categoryMeta = [
   { key: "staff", label: "เจ้าหน้าที่", icon: UserRound, className: "bg-cyan-600 text-white", chip: "bg-cyan-50 text-cyan-700" },
 ];
 
-const fallbackProfiles: PersonnelDirectoryProfile[] = [
-  {
-    id: -1,
-    page_slug: "administrators",
-    section_title: "ผู้บริหาร",
-    full_name: "นายอภิชาติ กุลรานี",
-    position_title: "ผู้อำนวยการวิทยาลัย",
-    department: "สำนักงานผู้อำนวยการ",
-    committee_role: "ผู้บริหาร",
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-f7946a0c-c527-45b5-bc32-e3c737e481a7.jpg",
-    appointment_file: null,
-    profile_note: "บริหารสถานศึกษาและกำกับทิศทางการพัฒนาวิทยาลัย",
-    sort_order: 1,
-    status: "active",
-  },
-  {
-    id: -2,
-    page_slug: "administrators",
-    section_title: "ผู้บริหาร",
-    full_name: "นางปลิสา ศรีสานุการ",
-    position_title: "รองผู้อำนวยการฝ่ายวิชาการ",
-    department: "ฝ่ายวิชาการ",
-    committee_role: "ผู้บริหาร",
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-da79afa2-fbbb-434c-b2a8-a026e40ea7c0.png",
-    appointment_file: null,
-    profile_note: "กำกับงานพัฒนาหลักสูตร การจัดการเรียนรู้ และงานวัดผลประเมินผล",
-    sort_order: 2,
-    status: "active",
-  },
-  {
-    id: -3,
-    page_slug: "administrators",
-    section_title: "ผู้บริหาร",
-    full_name: "นางสุนีย์ ปรีชานนทกุล",
-    position_title: "รองผู้อำนวยการฝ่ายพัฒนากิจการนักเรียน นักศึกษา",
-    department: "ฝ่ายพัฒนากิจการนักเรียน นักศึกษา",
-    committee_role: "ผู้บริหาร",
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-b6de2906-1a5f-43e7-8142-e59adcc5e767.png",
-    appointment_file: null,
-    profile_note: "กำกับงานกิจกรรมนักเรียน นักศึกษา งานแนะแนว และสวัสดิการ",
-    sort_order: 3,
-    status: "active",
-  },
-  {
-    id: -4,
-    page_slug: "administrators",
-    section_title: "ผู้บริหาร",
-    full_name: "นายเทอดศักดิ์ ผลพูน",
-    position_title: "รองผู้อำนวยการฝ่ายบริหารทรัพยากร",
-    department: "ฝ่ายบริหารทรัพยากร",
-    committee_role: "ผู้บริหาร",
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-b2705b7b-1892-447d-8163-2e8e4760dfd7.png",
-    appointment_file: null,
-    profile_note: "กำกับงานบุคลากร การเงิน บัญชี พัสดุ และอาคารสถานที่",
-    sort_order: 4,
-    status: "active",
-  },
-  {
-    id: -5,
-    page_slug: "personnel-data",
-    section_title: "ข้าราชการครู",
-    full_name: "นายวิทยา จันทร์เพ็ญ",
-    position_title: "ครู คศ.3 หัวหน้าแผนกวิชาช่างยนต์",
-    department: "แผนกวิชาช่างยนต์",
-    committee_role: null,
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-b08427e8-7f8e-4ebf-b2c4-06056ce9372d.jpg",
-    appointment_file: null,
-    profile_note: "จัดการเรียนการสอนและดูแลหลักสูตรแผนกวิชา",
-    sort_order: 10,
-    status: "active",
-  },
-  {
-    id: -6,
-    page_slug: "personnel-data",
-    section_title: "ข้าราชการครู",
-    full_name: "นางสาววราภัย คงสุข",
-    position_title: "ครู คศ.2 แผนกวิชาการบัญชี",
-    department: "แผนกวิชาการบัญชี",
-    committee_role: null,
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-91ff9a88-abce-47dd-ae3c-5782a34ca70a.jpg",
-    appointment_file: null,
-    profile_note: "จัดการเรียนการสอนและงานวิชาการประจำแผนก",
-    sort_order: 11,
-    status: "active",
-  },
-  {
-    id: -7,
-    page_slug: "personnel-data",
-    section_title: "พนักงานราชการ",
-    full_name: "นายปริญญา ทองสุข",
-    position_title: "ครูพิเศษสอน สาขาไฟฟ้ากำลัง",
-    department: "แผนกวิชาไฟฟ้ากำลัง",
-    committee_role: null,
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-2916a2e7-e056-4fc2-9388-75a60700c042.jpg",
-    appointment_file: null,
-    profile_note: "สนับสนุนการจัดการเรียนการสอนด้านไฟฟ้ากำลัง",
-    sort_order: 12,
-    status: "active",
-  },
-  {
-    id: -8,
-    page_slug: "personnel-data",
-    section_title: "เจ้าหน้าที่",
-    full_name: "นายธนกฤต นามสุข",
-    position_title: "เจ้าหน้าที่ธุรการ",
-    department: "งานธุรการ",
-    committee_role: null,
-    contact_phone: "044-514414",
-    contact_email: null,
-    contact_channel: null,
-    term_period: null,
-    photo_path: "/uploads/personnel/personnel_profiles-photo_path-23caa928-bc7d-4dac-80fd-444a18be837f.png",
-    appointment_file: null,
-    profile_note: "สนับสนุนงานสารบรรณและประสานงานเอกสาร",
-    sort_order: 13,
-    status: "active",
-  },
-];
-
 function firstValue(searchParams: SearchParams, key: string): string {
   const value = searchParams[key];
   return Array.isArray(value) ? value[0] ?? "" : value ?? "";
@@ -363,8 +216,7 @@ export function PersonnelDirectory({
   const summaryRowsById = new Map((summaryRows ?? []).map((row) => [row.id, row]));
   const canManagePersonnel = Boolean(user && personnelConfig && canAccess(user.effectivePermissions, personnelConfig.permission));
   const canManageSummary = Boolean(user && summaryConfig && canAccess(user.effectivePermissions, summaryConfig.permission));
-  const usingFallbackProfiles = !profiles.length;
-  const directoryProfiles = profiles.length ? profiles : fallbackProfiles;
+  const directoryProfiles = profiles;
   const activeProfiles = directoryProfiles.filter((profile) => isActive(profile.status));
   const inactiveProfiles = canManagePersonnel && profiles.length ? profiles.filter((profile) => !isActive(profile.status)) : [];
   const latestYear = summaryStats[0]?.academic_year ?? "2569";
@@ -532,30 +384,6 @@ export function PersonnelDirectory({
           ) : null}
         </div>
       </div>
-
-      {usingFallbackProfiles && canManagePersonnel && personnelConfig ? (
-        <section className="rounded-lg border border-amber-200 bg-amber-50/90 p-4 shadow-sm shadow-amber-950/5">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <Badge variant="outline" className="border-amber-200 bg-white text-amber-800">ข้อมูลตัวอย่าง</Badge>
-              <h2 className="mt-2 font-bold text-slate-950">ยังไม่มีข้อมูลบุคลากรจริงในฐานข้อมูล</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-600">
-                การ์ดที่เห็นเป็นข้อมูลตัวอย่างเพื่อให้หน้าเว็บไม่ว่างเปล่า หากต้องการจัดการข้าราชการครูและบุคลากรเต็มระบบ ให้เพิ่มรายการจริง ระบบจะเชื่อม CRUD และรูปภาพให้ทันที
-              </p>
-            </div>
-            <AdminCrudCreateButton
-              user={user}
-              permission={personnelConfig.permission}
-              moduleKey={personnelConfig.key}
-              moduleLabel={personnelConfig.label}
-              fields={personnelConfig.fields}
-              label="เพิ่มข้าราชการครู"
-              adminHref="/admin/modules/personnel_profiles"
-              initialValues={{ page_slug: "personnel-data", section_title: "ข้าราชการครู", status: "active" }}
-            />
-          </div>
-        </section>
-      ) : null}
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_280px]">
         <div className="flex flex-col gap-3">

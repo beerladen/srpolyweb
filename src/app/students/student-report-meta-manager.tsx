@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarDays, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { showAppToast } from "@/components/ui/app-toast";
 import {
   Dialog,
   DialogContent,
@@ -38,7 +39,9 @@ export function StudentReportMetaManager({ rows, academicYear, reportDate }: Stu
 
   async function saveMeta() {
     if (!rows.length) {
-      setMessage("ยังไม่มีแถวข้อมูลสำหรับปีการศึกษานี้");
+      const errorMessage = "ยังไม่มีแถวข้อมูลสำหรับปีการศึกษานี้";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
       return;
     }
 
@@ -58,16 +61,23 @@ export function StudentReportMetaManager({ rows, academicYear, reportDate }: Stu
 
         if (!response.ok) {
           const result = (await response.json().catch(() => null)) as { message?: string } | null;
-          setMessage(result?.message ?? "ยังบันทึกรายละเอียดหัวรายงานไม่ได้");
+          const errorMessage = result?.message ?? "ยังบันทึกรายละเอียดหัวรายงานไม่ได้";
+          setMessage(errorMessage);
+          showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
           setSaving(false);
           return;
         }
       }
 
-      setMessage(`บันทึกรายละเอียดหัวรายงาน ${rows.length.toLocaleString("th-TH")} แถวแล้ว`);
+      const successMessage = `บันทึกรายละเอียดหัวรายงาน ${rows.length.toLocaleString("th-TH")} แถวแล้ว`;
+      setMessage(successMessage);
+      setOpen(false);
+      showAppToast({ type: "success", title: "อัปเดตหัวรายงานสำเร็จ", message: successMessage });
       router.refresh();
     } catch {
-      setMessage("ยังบันทึกไม่ได้ โปรดลองอีกครั้ง");
+      const errorMessage = "ยังบันทึกไม่ได้ โปรดลองอีกครั้ง";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
     } finally {
       setSaving(false);
     }

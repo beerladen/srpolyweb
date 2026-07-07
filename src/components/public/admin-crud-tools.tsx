@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Eye, ExternalLink, FileUp, ImageUp, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { showAppToast } from "@/components/ui/app-toast";
 import {
   Dialog,
   DialogContent,
@@ -181,12 +182,16 @@ export function AdminCrudTools({
     setIsSaving(false);
 
     if (!response.ok) {
-      setMessage(result?.message ?? "ยังบันทึกข้อมูลไม่ได้ โปรดลองอีกครั้ง");
+      const errorMessage = result?.message ?? "ยังบันทึกข้อมูลไม่ได้ โปรดลองอีกครั้ง";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
       return;
     }
 
-    setMessage(isEditing ? "อัปเดตแล้ว" : "สร้างรายการแล้ว");
+    const successMessage = isEditing ? "อัปเดตข้อมูลสำเร็จ" : "สร้างรายการสำเร็จ";
+    setMessage(successMessage);
     setOpen(false);
+    showAppToast({ type: "success", title: successMessage, message: `${moduleLabel} บันทึกเรียบร้อยแล้ว` });
     router.refresh();
 
     if (!isEditing) {
@@ -220,12 +225,15 @@ export function AdminCrudTools({
     setIsDeleting(false);
 
     if (!response.ok) {
-      setMessage(result?.message ?? "ยังลบรายการไม่ได้ โปรดลองอีกครั้ง");
+      const errorMessage = result?.message ?? "ยังลบรายการไม่ได้ โปรดลองอีกครั้ง";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "ลบไม่สำเร็จ", message: errorMessage });
       return;
     }
 
     setMessage("ลบรายการแล้ว");
     setOpen(false);
+    showAppToast({ type: "success", title: "ลบรายการสำเร็จ", message: `${moduleLabel} ถูกลบแล้ว` });
     router.refresh();
     router.push(afterDeleteHref ?? adminHref);
   }
@@ -646,7 +654,7 @@ export function AdminCrudTools({
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle>{isEditing ? `จัดการ${moduleLabel}` : `เพิ่ม${moduleLabel}`}</DialogTitle>
+          <DialogTitle>{isEditing ? `อัปเดตข้อมูล${moduleLabel}` : `เพิ่ม${moduleLabel}`}</DialogTitle>
           <DialogDescription>
             {isEditing ? row?.title : `สร้างรายการใหม่ใน${moduleLabel}`}
           </DialogDescription>
@@ -704,7 +712,7 @@ export function AdminCrudTools({
           </div>
           <Button onClick={handleSave} disabled={isSaving}>
             <Save data-icon="inline-start" />
-            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดต" : "สร้างรายการ"}
+            {isSaving ? "กำลังบันทึก" : isEditing ? "อัปเดตข้อมูล" : "สร้างรายการ"}
           </Button>
         </DialogFooter>
       </DialogContent>

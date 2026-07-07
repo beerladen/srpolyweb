@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Noto_Sans_Thai } from "next/font/google";
+import { AppToastProvider } from "@/components/ui/app-toast";
 import { getSiteThemePreset, themeTokensToStyle } from "@/lib/site-theme";
 import "./globals.css";
 
@@ -30,6 +31,7 @@ export default async function RootLayout({
     >
       <body className={`${notoSansThai.variable} font-sans antialiased`}>
         {children}
+        <AppToastProvider />
       </body>
     </html>
   );

@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { showAppToast } from "@/components/ui/app-toast";
 import {
   Dialog,
   DialogContent,
@@ -325,7 +326,9 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
       const result = (await response.json().catch(() => null)) as SavedStudentEnrollmentResponse | null;
 
       if (!response.ok) {
-        setMessage(result?.message ?? "ยังบันทึกข้อมูลไม่ได้");
+        const errorMessage = result?.message ?? "ยังบันทึกข้อมูลไม่ได้";
+        setMessage(errorMessage);
+        showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
         return false;
       }
 
@@ -337,13 +340,16 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
 
       if (!options.quiet) {
         setMessage("บันทึกข้อมูลแล้ว");
+        showAppToast({ type: "success", title: "บันทึกข้อมูลสำเร็จ", message: "อัปเดตจำนวนผู้เรียนเรียบร้อยแล้ว" });
       }
       if (refreshAfterSave) {
         router.refresh();
       }
       return true;
     } catch {
-      setMessage("ยังบันทึกข้อมูลไม่ได้ โปรดลองอีกครั้ง");
+      const errorMessage = "ยังบันทึกข้อมูลไม่ได้ โปรดลองอีกครั้ง";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "บันทึกไม่สำเร็จ", message: errorMessage });
       return false;
     } finally {
       setWorkingKey(null);
@@ -361,7 +367,10 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
       savedCount += 1;
     }
 
-    setMessage(`บันทึกข้อมูลทั้งหมด ${savedCount.toLocaleString("th-TH")} แถวแล้ว`);
+    const successMessage = `บันทึกข้อมูลทั้งหมด ${savedCount.toLocaleString("th-TH")} แถวแล้ว`;
+    setMessage(successMessage);
+    setOpen(false);
+    showAppToast({ type: "success", title: "อัปเดตข้อมูลผู้เรียนสำเร็จ", message: successMessage });
     router.refresh();
   }
 
@@ -391,12 +400,15 @@ export function StudentEnrollmentManager({ academicYear, department, rows, compa
     setWorkingKey(null);
 
     if (!response.ok) {
-      setMessage(result?.message ?? "ยังลบข้อมูลไม่ได้");
+      const errorMessage = result?.message ?? "ยังลบข้อมูลไม่ได้";
+      setMessage(errorMessage);
+      showAppToast({ type: "error", title: "ลบไม่สำเร็จ", message: errorMessage });
       return;
     }
 
     setDrafts((current) => current.filter((row) => row.localKey !== draft.localKey));
     setMessage("ลบข้อมูลแล้ว");
+    showAppToast({ type: "success", title: "ลบข้อมูลสำเร็จ", message: "ลบแถวข้อมูลผู้เรียนเรียบร้อยแล้ว" });
     router.refresh();
   }
 
