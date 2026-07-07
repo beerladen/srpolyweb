@@ -349,18 +349,23 @@ function DutyList({ items, theme, compact = false }: { items: string[]; theme: T
   }
 
   return (
-    <ul className={`relative grid gap-2 pl-5 before:absolute before:bottom-4 before:left-2 before:top-4 before:border-l-2 before:border-dashed ${theme.line}`}>
-      {items.map((item) => {
+    <ul className="relative grid gap-2 pl-5">
+      {items.map((item, index) => {
         const duty = parseDutyItem(item);
+        const hasNext = index < items.length - 1;
 
         return (
         <li
           key={item}
           className={`relative rounded-md border border-slate-100 bg-white/95 px-3 shadow-sm shadow-blue-950/5 ${
             compact ? "py-1.5 text-xs leading-5" : "py-2 text-sm leading-6"
-          } text-slate-700`}
+          } text-slate-700 ${
+            hasNext
+              ? `after:absolute after:-left-[15px] after:top-1/2 after:h-[calc(100%+0.5rem)] after:border-l-2 after:border-dashed ${theme.line}`
+              : ""
+          }`}
         >
-          <span className={`absolute -left-[19px] top-1/2 size-2.5 -translate-y-1/2 rounded-full ring-4 ring-white ${theme.bullet}`} />
+          <span className={`absolute -left-[19px] top-1/2 z-10 size-2.5 -translate-y-1/2 rounded-full ring-4 ring-white ${theme.bullet}`} />
           {duty.people.length ? (
             <details className="group">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-medium text-slate-800">
@@ -539,9 +544,9 @@ export function AdministrativeStructureChart({
             </article>
 
             {committee ? (
-              <article className="relative rounded-lg border border-purple-300 bg-white p-4 shadow-lg shadow-purple-950/5">
-                <span className="absolute right-full top-1/2 hidden w-14 -translate-y-1/2 border-t-2 border-dashed border-slate-400 lg:block" />
-                <ArrowRight className="absolute -left-3 top-1/2 hidden size-5 -translate-y-1/2 text-slate-500 lg:block" />
+              <article className="relative rounded-lg border border-purple-300 bg-white p-4 shadow-lg shadow-purple-950/5 lg:ml-6">
+                <span className="absolute right-full top-1/2 hidden w-11 -translate-y-1/2 border-t-2 border-dashed border-slate-400 lg:block" />
+                <ArrowRight className="absolute right-full top-1/2 hidden size-5 -translate-y-1/2 text-slate-500 lg:block" />
                 <div className="flex items-center gap-3">
                   <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-purple-100 text-purple-700">
                     <UnitIcon unit={committee} />
