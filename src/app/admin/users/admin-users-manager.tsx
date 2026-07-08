@@ -36,7 +36,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { showAppToast } from "@/components/ui/app-toast";
 import { apiPath } from "@/lib/base-path";
-import { permissionCatalogKeys, permissionDescription, permissionLabel } from "@/lib/permissions";
+import { expandPermissions, permissionCatalogKeys, permissionDescription, permissionLabel } from "@/lib/permissions";
 import type { AdminUser } from "@/lib/admin-auth";
 import type { ManagedAdminRole, ManagedAdminUser, PasswordResetRequest } from "@/lib/admin-user-management";
 
@@ -116,6 +116,8 @@ const emptyRoleForm: RoleFormState = {
   permissions: [],
 };
 
+const emptyPermissions: string[] = [];
+
 const emptyResetPasswordForm: ResetPasswordFormState = {
   userId: 0,
   userName: "",
@@ -161,13 +163,15 @@ function PermissionPicker({
   selected,
   onChange,
   disabled = false,
+  allowAll = true,
 }: {
   selected: string[];
   onChange: (permissions: string[]) => void;
   disabled?: boolean;
+  allowAll?: boolean;
 }) {
   const selectedSet = useMemo(() => new Set(selected), [selected]);
-  const hasAll = selectedSet.has("*");
+  const hasAll = allowAll && selectedSet.has("*");
   const groupedKeys = new Set(permissionGroups.flatMap((group) => group.keys));
   const remainingKeys = permissionCatalogKeys().filter((key) => !groupedKeys.has(key));
   const groups = remainingKeys.length
@@ -197,21 +201,23 @@ function PermissionPicker({
 
   return (
     <div className="grid gap-4">
-      <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
-        <input
-          type="checkbox"
-          className="mt-1 size-4 accent-blue-700"
-          checked={hasAll}
-          disabled={disabled}
-          onChange={() => togglePermission("*")}
-        />
-        <span className="min-w-0">
-          <span className="block text-sm font-bold text-blue-950">ทุกเมนู / Super Admin</span>
-          <span className="mt-1 block text-xs leading-5 text-slate-600">
-            ใช้เฉพาะบัญชีผู้ดูแลสูงสุด เพราะสามารถจัดการผู้ใช้ สำรองข้อมูล และทุกโมดูลได้ทั้งหมด
+      {allowAll ? (
+        <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-blue-100 bg-blue-50/70 p-3">
+          <input
+            type="checkbox"
+            className="mt-1 size-4 accent-blue-700"
+            checked={hasAll}
+            disabled={disabled}
+            onChange={() => togglePermission("*")}
+          />
+          <span className="min-w-0">
+            <span className="block text-sm font-bold text-blue-950">ทุกเมนู / Super Admin</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-600">
+              ใช้เฉพาะบัญชีผู้ดูแลสูงสุด เพราะสามารถจัดการผู้ใช้ สำรองข้อมูล และทุกโมดูลได้ทั้งหมด
+            </span>
           </span>
-        </span>
-      </label>
+        </label>
+      ) : null}
       <div className="grid gap-3 md:grid-cols-2">
         {groups.map((group) => (
           <section key={group.title} className="rounded-lg border border-blue-100 bg-white p-3">
@@ -311,7 +317,11 @@ export function AdminUsersManager({ users, roles, currentUser, passwordResetRequ
     user: request.userId ? usersById.get(request.userId) : usersByIdentifier.get(request.identifier.toLowerCase()),
   }));
   const selectedRole = roles.find((role) => String(role.id) === userForm.roleId) ?? null;
-  const selectedRolePermissions = selectedRole?.permissions ?? [];
+  const selectedRolePermissions = selectedRole?.permissions ?? emptyPermissions;
+  const userEffectivePermissionPreview = useMemo(
+    () => normalizePermissionList(expandPermissions([...selectedRolePermissions, ...userForm.permissions])),
+    [selectedRolePermissions, userForm.permissions]
+  );
   const userFormTitle = userForm.id ? "อัปเดตบัญชีผู้ใช้" : "เพิ่มบัญชีผู้ใช้";
   const roleFormTitle = roleForm.id ? "อัปเดตบทบาท" : "เพิ่มบทบาท";
 
@@ -390,7 +400,9 @@ export function AdminUsersManager({ users, roles, currentUser, passwordResetRequ
       roleName: userForm.roleId === customRoleValue ? userForm.roleName : selectedRole?.roleName,
       department: userForm.department,
       status: userForm.status,
-      permissions: userForm.permissions,
+      permissions: userForm.roleId === customRoleValue
+        ? userForm.permissions
+        : userForm.permissions.filter((permission) => permission !== "*"),
     };
     const endpoint = userForm.id ? `/api/admin/users/${userForm.id}` : "/api/admin/users";
     const method = userForm.id ? "PATCH" : "POST";
@@ -829,6 +841,11 @@ export function AdminUsersManager({ users, roles, currentUser, passwordResetRequ
                       ...form,
                       roleId: value,
                       roleName: role?.roleName ?? "กำหนดเอง",
+                      permissions: value === customRoleValue
+                        ? form.permissions
+                        : form.roleId === value
+                          ? form.permissions.filter((permission) => permission !== "*")
+                          : [],
                     }));
                   }}
                 >
@@ -873,16 +890,39 @@ export function AdminUsersManager({ users, roles, currentUser, passwordResetRequ
             ) : null}
 
             <section className="grid gap-3">
-              <div>
-                <h4 className="font-bold text-slate-950">สิทธิ์เฉพาะรายบัญชี</h4>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  สิทธิ์ส่วนนี้จะถูกเพิ่มจากบทบาทหลัก ถ้าเลือก “ทุกเมนู” บัญชีนี้จะเป็น Super Admin
-                </p>
+              <div className="flex flex-col gap-3 rounded-lg border border-amber-100 bg-amber-50/70 p-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <h4 className="font-bold text-slate-950">สิทธิ์เสริมรายบัญชี</h4>
+                  <p className="mt-1 text-sm leading-6 text-slate-700">
+                    ใช้เฉพาะกรณีต้องให้บัญชีนี้จัดการมากกว่าบทบาทหลัก หากเลือกบทบาทหลักปกติ ระบบจะล้างสิทธิ์เสริมเมื่อเปลี่ยนบทบาทเพื่อป้องกันเมนูค้างเกินสิทธิ์
+                  </p>
+                </div>
+                {userForm.permissions.length ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="shrink-0 border-amber-200 bg-white"
+                    onClick={() => setUserForm((form) => ({ ...form, permissions: [] }))}
+                  >
+                    ล้างสิทธิ์เสริม
+                  </Button>
+                ) : null}
               </div>
               <PermissionPicker
                 selected={userForm.permissions}
                 onChange={(permissions) => setUserForm((form) => ({ ...form, permissions }))}
+                allowAll={userForm.roleId === customRoleValue}
               />
+              <section className="rounded-lg border border-blue-100 bg-blue-50/60 p-3">
+                <h4 className="text-sm font-bold text-blue-950">สิทธิ์รวมที่จะมีผลจริง</h4>
+                <p className="mt-1 text-xs leading-5 text-blue-800">
+                  ระบบจะนำสิทธิ์จากบทบาทหลักมารวมกับสิทธิ์เสริม แล้วใช้ชุดนี้กรองเมนูหลังบ้านและปุ่มจัดการบนหน้าเว็บ
+                </p>
+                <div className="mt-2">
+                  <PermissionChips permissions={userEffectivePermissionPreview} />
+                </div>
+              </section>
             </section>
           </FieldGroup>
 
